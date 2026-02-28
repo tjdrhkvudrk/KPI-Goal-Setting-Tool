@@ -66,7 +66,7 @@ st.markdown("""
         padding: 10px 5px; 
         text-align: center; 
         font-weight: bold; 
-        font-size: 14px;
+        font-size: 15px;
         border: 1px solid #dee2e6;
         min-height: 45px;
         display: flex;
@@ -132,3 +132,4 @@ st.markdown("---")
 if st.button("🚀 통합 성과 분석 실행"):
     # ... (중략: 기존 분석 및 그래프 로직)
     st.info("분석이 완료되었습니다. 하단 결과를 확인하세요.")
+
