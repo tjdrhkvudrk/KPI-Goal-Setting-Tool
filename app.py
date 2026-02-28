@@ -6,7 +6,7 @@ import matplotlib.font_manager as fm
 import os
 import requests
 
-# 1. 한글 폰트 및 설정
+# 1. 한글 폰트 설정
 @st.cache_resource
 def load_korean_font():
     font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
@@ -49,16 +49,16 @@ st.markdown("""
 
 st.title("⚖️ 중장기 성과지표 목표설정 및 한계점 분석기")
 
-# 사이드바
+# 사이드바 (소수점 셋째자리 고정)
 가중치_값 = st.sidebar.number_input("가중치", value=5.000, step=0.001, format="%.3f")
 지표방향 = st.sidebar.selectbox("지표 방향", ["상향", "하향"])
 
 st.subheader("1. 실적 데이터 및 중장기 전망 입력")
 
-# 3. 데이터 입력 및 자동계산
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
 
+# --- 과거 5개년 섹션 ---
 with m_cols[0]:
     st.markdown('<div class="main-header bg-past">과거 5개년 실적 (2021~2025)</div>', unsafe_allow_html=True)
     p_cols = st.columns(5)
@@ -68,11 +68,13 @@ with m_cols[0]:
             val = st.number_input(f"p_{year}", value=round(100.0 + (i*5), 3), step=0.001, format="%.3f", key=f"v_{year}")
             실적_리스트.append(val)
 
+# --- 2026 예상 섹션 ---
 with m_cols[1]:
     st.markdown('<div class="main-header bg-current">2026년 (예상)</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">실적 입력</div>', unsafe_allow_html=True)
     예상_2026 = st.number_input("curr_2026", value=round(실적_리스트[-1] * 1.05, 3), step=0.001, format="%.3f", key="v_2026")
 
+# --- 미래 전망 섹션 (자동계산) ---
 with m_cols[2]:
     st.markdown('<div class="main-header bg-future">중장기 실적 전망 (자동)</div>', unsafe_allow_html=True)
     f_cols = st.columns(3)
@@ -86,7 +88,7 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# [수정] 누락되었던 중장기 전망 분석결과 추가
+# 4. 실적 분석 참고내용 (셋째자리 반올림 적용)
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
 avg_f = round(np.mean(미래_전망), 3)
@@ -101,7 +103,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 4. 분석 실행 및 결과
+# 5. 분석 실행 및 결과
 st.markdown("---")
 if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
@@ -118,15 +120,21 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         최저 = round(기준치 * 0.8 if 지표방향=="상향" else 기준치 * 1.2, 3)
         평점 = round(max(20.0, min(100.0, 20 + 80 * ((예상_2026 - 최저) / (최고 - 최저)))), 3)
         zp = (최고 - 예상_2026) / 오차 if 지표방향=="상향" else (예상_2026 - 최고) / 오차
-        도전성_지수 = (zp / 2.0) * 100
+        도전성_지수 = round((zp / 2.0) * 100, 3)
         단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지"
         판정 = "⚠️ 한계" if (abs(최고 - 기준치) > (3 * std3) or abs(최고/기준치 - 1) > 0.3) else "✅ 유지"
-        결과_데이터.append({"평가방법": 명칭, "지표성격": 지표방향, "기준치": 기준치, "최저목표": 최저, "최고목표": 최고, "예상실적": 예상_2026, "예상평점": 평점, "가중치": 가중치_값, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "추세치 분석결과": 판정})
+        결과_데이터.append({
+            "평가방법": 명칭, "지표성격": 지표방향, "기준치": 기준치, "최저목표": 최저, "최고목표": 최고,
+            "예상실적": 예상_2026, "예상평점": 평점, "가중치": 가중치_값, "예상득점": round(평점 * (가중치_값 / 100.0), 3),
+            "도전성 단계": 단계, "추세치 분석결과": 판정
+        })
 
     st.subheader("2. 평가방법별 비교 분석 결과 및 임계점 진단")
-    st.table(pd.DataFrame(결과_데이터).style.format({col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]}))
+    st.table(pd.DataFrame(결과_데이터).style.format({
+        col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]
+    }))
 
-    # 분석 지표 가이드
+    # 완벽하다고 하셨던 가이드 섹션 유지 (수식 포함)
     st.markdown("""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드 (정량적 근거)</span>
