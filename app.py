@@ -6,7 +6,7 @@ import matplotlib.font_manager as fm
 import os
 import requests
 
-# 1. 한글 폰트 및 설정
+# 1. 한글 폰트 설정
 @st.cache_resource
 def load_korean_font():
     font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (원본 스타일 복구)
+# 2. CSS 디자인
 st.set_page_config(page_title="계량 성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -45,10 +45,13 @@ st.markdown("""
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
     td { text-align: center !important; vertical-align: middle !important; border: 1px solid #E2E8F0; }
     .merged-cell { background-color: #EDF2F7; font-weight: bold; color: #2D3748; width: 120px; }
+    
+    /* 강조된 라벨 스타일 */
+    .strong-label { font-size: 20px !important; font-weight: 900 !important; color: #1A365D !important; margin-bottom: 12px; display: block; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 사이드바 (단위 표기 삭제)
+# 3. 사이드바
 with st.sidebar:
     st.markdown('<span class="sidebar-label">📌 지표명</span>', unsafe_allow_html=True)
     지표명 = st.text_input("kpi_name", value="전략 KPI")
@@ -61,9 +64,7 @@ with st.sidebar:
 
 st.title("📊 계량 성과지표 목표 설정 및 중장기 전망 시뮬레이터")
 
-# ----------------------------------------------------------------
-# 1~3번 섹션 (완벽 복구된 로직 유지)
-# ----------------------------------------------------------------
+# 1. 실적 데이터 처리
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
 with m_cols[0]:
@@ -113,7 +114,7 @@ st.markdown(f"""
 
 st.markdown("---")
 
-# 2. 결과 테이블
+# 2. 도전성 비교 테이블
 기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
 방법별 = [
     ("목표부여", "목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -153,7 +154,7 @@ html_table = f"""
 """
 st.markdown(html_table, unsafe_allow_html=True)
 
-# 3. 그래프 (목표부여 포인트 복구 확인)
+# 3. 그래프
 st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
 years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
 idx_future = np.arange(6, 10)
@@ -178,32 +179,45 @@ ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True,
 ax.grid(axis='y', linestyle='-', alpha=0.1)
 st.pyplot(fig)
 
-# ----------------------------------------------------------------
-# 4. 담당자 제언 (SyntaxError 해결 완료)
-# ----------------------------------------------------------------
+# 4. 담당자 제언 (비교대상 명칭 수정: '기준치')
 st.markdown("---")
 st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
 
 if 'f_idx' not in st.session_state: st.session_state.f_idx = 4
-if 'c_idx' not in st.session_state: st.session_state.c_idx = 5
-
 names = [r['평가방법'] for r in 결과_데이터]
+compare_names = ["기준치"] + names
 
 c1, c2 = st.columns(2)
 with c1:
-    선택방법 = st.selectbox("🎯 담당자 최종 선택", names, index=st.session_state.f_idx, key="box_f")
+    st.markdown('<span class="strong-label">🎯 담당자 최종 선택</span>', unsafe_allow_html=True)
+    선택방법 = st.selectbox("final_select", names, index=st.session_state.f_idx, key="box_f", label_visibility="collapsed")
     st.session_state.f_idx = names.index(선택방법)
 with c2:
-    비교방법 = st.selectbox("⚖️ 비교 대상 (대조군)", names, index=st.session_state.c_idx, key="box_c")
-    st.session_state.c_idx = names.index(비교방법)
+    st.markdown('<span class="strong-label">⚖️ 비교 대상 (대조군)</span>', unsafe_allow_html=True)
+    비교방법 = st.selectbox("compare_select", compare_names, index=0, key="box_c", label_visibility="collapsed")
 
 sel = next(item for item in 결과_데이터 if item["평가방법"] == 선택방법)
-comp = next(item for item in 결과_데이터 if item["평가방법"] == 비교방법)
-gap = round(abs(sel['최고목표'] - comp['최고목표']), 3)
 sigma_lv = round(abs(sel['최고목표'] - 예상_2026) / std5, 2) if std5 != 0 else 0
-imp_rate = round((abs(sel['최고목표'] - 예상_2026) / 예상_2026) * 100, 2) if 예상_2026 != 0 else 0
 
-# HTML 카드 디자인 (st.markdown을 한 번에 깔끔하게 닫았습니다)
+# '기준치' 선택 시의 종합 통계 분석 로직
+if 비교방법 == "기준치":
+    base_gap = round(abs(sel['최고목표'] - 기준치), 3)
+    base_sigma = round(base_gap / std3, 2) if std3 != 0 else 0
+    imp_rate_vs_base = round((base_gap / 기준치) * 100, 2) if 기준치 != 0 else 0
+    
+    gap_display = str(base_gap)
+    sub_label = "기준치 대비 상향액"
+    logic_text = f"""통계적 기준치(<b>{기준치:.3f}</b>) 대비 <b>{base_gap}</b>({imp_rate_vs_base}%)을 상향 설정하였으며, 
+    이는 과거 실적 변동폭(표준편차)의 <b>{base_sigma}배</b>에 달하는 수준입니다. 
+    최근 3개년 평균 및 전년 실적을 모두 상회하는 <b>{sel['도전성 단계']}</b> 목표로서 객관적 타당성을 확보하였습니다."""
+else:
+    comp = next(item for item in 결과_데이터 if item["평가방법"] == 비교방법)
+    gap = round(abs(sel['최고목표'] - comp['최고목표']), 3)
+    
+    gap_display = str(gap)
+    sub_label = "목표 상향액(Gap)"
+    logic_text = f"대안 모델인 '{비교방법}({comp['최고목표']:.3f})' 대비 <b>{gap}</b>의 추가 상향을 통해 기관의 성과 창출 의지를 적극 반영하였습니다."
+
 st.markdown(f"""
 <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -214,23 +228,23 @@ st.markdown(f"""
     </div>
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
         <div style="text-align: center; padding: 15px; background-color: #f7fafc; border-radius: 10px;">
-            <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">목표 상향액(Gap)</div>
-            <div style="font-size: 18px; font-weight: 800; color: #2d3748;">{gap}</div>
+            <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">{sub_label}</div>
+            <div style="font-size: 18px; font-weight: 800; color: #2d3748;">{gap_display}</div>
         </div>
         <div style="text-align: center; padding: 15px; background-color: #f7fafc; border-radius: 10px;">
             <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">변동성 대비(Sigma)</div>
             <div style="font-size: 18px; font-weight: 800; color: #2d3748;">{sigma_lv}σ</div>
         </div>
         <div style="text-align: center; padding: 15px; background-color: #f7fafc; border-radius: 10px;">
-            <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">예상 대비 증감</div>
-            <div style="font-size: 18px; font-weight: 800; color: #e53e3e;">{imp_rate}%</div>
+            <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">설정 근거 수준</div>
+            <div style="font-size: 18px; font-weight: 800; color: #e53e3e;">{sel['분석결과']}</div>
         </div>
     </div>
     <div style="line-height: 1.8; color: #4a5568; border-top: 1px solid #edf2f7; padding-top: 20px;">
         <p><b>[보고서용 목표 설정 근거 초안]</b></p>
-        1. 본 지표의 목표치(<b>{sel['최고목표']:.3f}</b>)는 예상 실적 대비 과거 5개년 변동폭의 <b>{sigma_lv}배</b> 수준으로, 
-        단순 추세 연장을 탈피한 <b>{sel['도전성 단계']}</b> 목표임을 확인하였습니다.<br>
-        2. 대안 모델인 '{비교방법}({comp['최고목표']:.3f})' 대비 <b>{gap}</b>의 추가 상향을 통해 성과 창출 의지를 적극 반영하였습니다.
+        1. 본 지표의 최종 목표치(<b>{sel['최고목표']:.3f}</b>)는 과거 실적 기반의 <b>{sel['도전성 단계']}</b> 시나리오를 채택하였습니다.<br>
+        2. {logic_text}<br>
+        3. 중장기 전망 분석 결과, 본 목표는 향후 성장 궤도를 선도할 수 있는 전략적 임계점에 위치하고 있습니다.
     </div>
 </div>
 """, unsafe_allow_html=True)
