@@ -94,20 +94,23 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# 실적 분석 안내
+# 실적 분석 안내 (복구: 3개년, 5개년, 중장기 전망 모두 포함)
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
+avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
+avg_f = round(np.mean(미래_전망), 3)
+
 st.markdown(f"""
 <div class="guide-box">
     <span class="guide-title">📑 실적 분석 참고내용</span>
     • <b>과거 3개년 실적 분석결과:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[-3])**(1/2)-1)*100, 3):.3f}%<br>
-    • <b>중장기 전망 분석결과:</b> 평균 {round(np.mean(미래_전망), 3):.3f}, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3):.3f}%
+    • <b>과거 5개년 실적 분석결과:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[0])**(1/4)-1)*100, 3):.3f}%<br>
+    • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3):.3f}%
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("---")
 
 if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
-    # 분석 로직 계산
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     방법별_설정 = [
         ("목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -137,7 +140,7 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
     df_res = pd.DataFrame(결과_데이터)
     st.table(df_res.drop(columns=['raw_도전성']).style.format({col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]}))
 
-    # --- [위치 이동] 분석 지표 가이드 (표 바로 아래) ---
+    # --- [위치 고정] 분석 지표 가이드 (표 바로 아래) ---
     st.markdown("""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
@@ -177,7 +180,7 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         if alternative and alternative['평가방법'] != recom['평가방법']:
             compare_text = f"기존의 <b>[{alternative['평가방법']}]</b> 등 보수적인 설정 방식도 검토하였으나, 성과 창출 동기 부여를 위해 <b>이보다 목표 수준이 더 높은 [{recom['평가방법']}]</b>을 최종 최적안으로 선정하였습니다."
         else:
-            compare_text = "다각적인 시뮬레이션을 통해 단순 개선을 넘어선 <b>가장 도전적인 수준의 목표 부여 방식</b>을 채택하였습니다."
+            compare_text = "다각적인 시나리오 시뮬레이션을 통해 단순 개선을 넘어선 <b>가장 도전적인 수준의 목표 부여 방식</b>을 채택하였습니다."
 
         st.markdown(f"""
         <div class="recom-box">
