@@ -27,33 +27,37 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. 디자인 설정 (이미지 스타일 복원 및 2단 헤더 구현)
+# 2. CSS 디자인 (가독성 최우선, 이미지 스타일 복원)
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
-    html, body, [class*="st-"] { font-size: 15px !important; }
+    /* 전체 폰트 및 배경 */
+    html, body, [class*="st-"] { font-size: 15px !important; font-family: 'NanumGothic', sans-serif; }
     
-    /* 2단 헤더 테이블 디자인 (실종된 제목 셀 복구) */
-    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 0px; table-layout: fixed; }
-    .header-table th { color: white; border: 1px solid #dee2e6; padding: 12px; text-align: center; font-weight: bold; }
-    .bg-past { background-color: #2D6A4F !important; }
-    .bg-current { background-color: #D69E2E !important; }
-    .bg-future { background-color: #4A5568 !important; }
+    /* 대분류 헤더 스타일 (2단 헤더 대용) */
+    .main-header { padding: 10px; color: white; text-align: center; font-weight: bold; margin-bottom: 5px; border-radius: 5px 5px 0 0; }
+    .bg-past { background-color: #2D6A4F; }
+    .bg-current { background-color: #D69E2E; }
+    .bg-future { background-color: #4A5568; }
 
-    /* 입력 위젯 및 자동계산 박스 정렬 */
+    /* 개별 연도 헤더 스타일 */
+    .sub-header { background-color: #f1f3f5; padding: 5px; text-align: center; font-size: 13px; font-weight: bold; border: 1px solid #dee2e6; border-top: none; }
+
+    /* 입력창 여백 제거 */
     div[data-testid="stNumberInput"] label { display: none !important; }
-    .auto-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; height: 44px; display: flex; 
-                align-items: center; justify-content: center; font-weight: bold; color: #4A5568; border-radius: 4px; }
+    div[data-testid="stNumberInput"] > div { margin-top: -1px !important; }
 
-    /* 결과 표 스타일 (이미지 83747b 스타일 복원) */
+    /* 자동계산 결과창 */
+    .auto-res { background-color: #F8FAFC; border: 1px solid #dee2e6; height: 42px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+
+    /* 분석 지표 가이드 (이미지 835713 스타일) */
+    .guide-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-top: 15px; line-height: 1.8; }
+    .guide-title { font-weight: bold; color: #2D3748; font-size: 16px; margin-bottom: 10px; display: block; }
+    
+    /* 결과 테이블 스타일 */
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
-    tbody tr td { text-align: center !important; }
+    td { text-align: center !important; }
     thead tr th:first-child, tbody tr th { display: none; }
-
-    /* 주석 박스 스타일 (이미지 835713 스타일) */
-    .note-container { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 25px; margin-top: 20px; }
-    .note-title { font-weight: bold; color: #2D3748; margin-bottom: 10px; display: block; }
-    .step-label { font-weight: bold; width: 80px; display: inline-block; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -65,61 +69,59 @@ st.title("⚖️ 중장기 성과지표 목표설정 및 한계점 분석기")
 
 st.subheader("1. 실적 데이터 및 중장기 전망 입력")
 
-# 3. [요청반영] 2단 헤더 제목 셀 구현
-st.markdown("""
-<table class="header-table">
-    <tr>
-        <th colspan="5" class="bg-past">과거 5개년 실적</th>
-        <th rowspan="2" class="bg-current">2026년 (예상) 실적</th>
-        <th colspan="3" class="bg-future">중장기 실적 전망</th>
-    </tr>
-    <tr>
-        <th class="bg-past">2021</th><th class="bg-past">2022</th><th class="bg-past">2023</th>
-        <th class="bg-past">2024</th><th class="bg-past">2025</th>
-        <th class="bg-future">2027</th><th class="bg-future">2028</th><th class="bg-future">2029</th>
-    </tr>
-</table>
-""", unsafe_allow_html=True)
-
-# 한 줄 입력 및 계산
+# 3. 레이아웃 구현 (실종된 제목 셀 해결을 위해 컨테이너 방식 채택)
 실적_리스트 = []
-cols = st.columns(9)
+m_cols = st.columns([5, 1, 3]) # 과거5, 현재1, 미래3 비율
 
-for i in range(5):
-    with cols[i]:
-        val = st.number_input(f"p_{i}", value=100.0 + (i*5), format="%.3f", key=f"in_{i}")
-        실적_리스트.append(val)
+# --- 과거 5개년 섹션 ---
+with m_cols[0]:
+    st.markdown('<div class="main-header bg-past">과거 5개년 실적 (2021~2025)</div>', unsafe_allow_html=True)
+    p_cols = st.columns(5)
+    for i, year in enumerate(range(2021, 2026)):
+        with p_cols[i]:
+            st.markdown(f'<div class="sub-header">{year}</div>', unsafe_allow_html=True)
+            val = st.number_input(f"p_{year}", value=100.0 + (i*5), format="%.3f", key=f"v_{year}")
+            실적_리스트.append(val)
 
-with cols[5]:
-    예상_2026 = st.number_input("c_2026", value=실적_리스트[-1] * 1.05, format="%.3f", key="in_2026")
+# --- 2026 예상 섹션 ---
+with m_cols[1]:
+    st.markdown('<div class="main-header bg-current">2026년 (예상)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">실적 입력</div>', unsafe_allow_html=True)
+    예상_2026 = st.number_input("curr_2026", value=실적_리스트[-1] * 1.05, format="%.3f", key="v_2026")
 
-# 추세선 기반 자동 계산
-X = np.arange(6)
-Y = np.array(실적_리스트 + [예상_2026])
-slope, intercept = np.polyfit(X, Y, 1)
+# --- 미래 전망 섹션 (자동계산) ---
+with m_cols[2]:
+    st.markdown('<div class="main-header bg-future">중장기 실적 전망 (자동)</div>', unsafe_allow_html=True)
+    f_cols = st.columns(3)
+    
+    # 추세 계산 로직
+    X = np.arange(6)
+    Y = np.array(실적_리스트 + [예상_2026])
+    slope, intercept = np.polyfit(X, Y, 1)
+    
+    미래_전망 = []
+    for i, year in enumerate(range(2027, 2030)):
+        with f_cols[i]:
+            st.markdown(f'<div class="sub-header">{year}</div>', unsafe_allow_html=True)
+            f_val = slope * (6 + i) + intercept
+            미래_전망.append(f_val)
+            st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-미래_전망 = []
-for i in range(3):
-    f_val = slope * (6 + i) + intercept
-    미래_전망.append(f_val)
-    with cols[6+i]:
-        st.markdown(f'<div class="auto-box">{f_val:.3f}</div>', unsafe_allow_html=True)
-
-# 4. [요청반영] 통계 결과 주석화
+# 4. 실적 분석 참고내용 (이미지 82e9b2 스타일)
 avg3, std3 = np.mean(실적_리스트[-3:]), np.std(실적_리스트[-3:])
 avg5, std5 = np.mean(실적_리스트), np.std(실적_리스트)
 avg_f = np.mean(미래_전망)
 
 st.markdown(f"""
-<div class="note-container">
-    <span class="note-title">📑 실적 분석 참고내용</span>
+<div class="guide-box">
+    <span class="guide-title">📑 실적 분석 참고내용</span>
     • <b>과거 3개년 실적 분석결과:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {((실적_리스트[-1]/실적_리스트[-3])**(1/2)-1)*100:.2f}%<br>
     • <b>과거 5개년 실적 분석결과:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {((실적_리스트[-1]/실적_리스트[0])**(1/4)-1)*100:.2f}%<br>
     • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, 연평균 증가율 {((미래_전망[-1]/예상_2026)**(1/3)-1)*100:.2f}%
 </div>
 """, unsafe_allow_html=True)
 
-# 5. 분석 실행
+# 5. 분석 실행 및 결과
 st.markdown("---")
 if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
     기준치 = float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1]))
@@ -151,29 +153,31 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
     df_res = pd.DataFrame(결과_데이터)
     st.table(df_res.style.format({col: "{:.3f}" for col in df_res.columns if col not in ["평가방법", "지표성격", "도전성 단계", "추세치 분석결과", "예상평점"]}).format({"예상평점": "{:.2f}"}))
 
-    # [요청반영] 도전성 단계 주석 복구
+    # 도전성 단계 가이드 복구 (이미지 835713 스타일)
     st.markdown("""
-    <div class="note-container">
-        <span class="note-title">1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</span>
-        • <span class="step-label">🏆 한계 혁신</span>: 과거의 흐름을 완전히 벗어난 파격적 목표로, 조직 역량의 대전환이 필요한 수준입니다.<br>
-        • <span class="step-label">🔥 적극 상향</span>: 과거 성장세를 상회하는 공격적 목표로, 성과 창출을 위한 적극적 노력이 수반됩니다.<br>
-        • <span class="step-label">📈 소극 개선</span>: 과거의 완만한 우상향 추세를 따르는 수준으로, 통상적인 노력으로 달성 가능합니다.<br>
-        • <span class="step-label">⚖️ 현상 유지</span>: 과거 실적 평균 수준의 목표로, 도전성보다는 안정적 관리에 치중한 상태입니다.
+    <div class="guide-box">
+        <span class="guide-title">💡 분석 지표 가이드</span>
+        <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
+        • 🏆 <b>한계 혁신</b>: 과거의 흐름을 완전히 벗어난 파격적 목표 수준<br>
+        • 🔥 <b>적극 상향</b>: 과거 성장세를 상회하는 공격적 목표 수준<br>
+        • 📈 <b>소극 개선</b>: 과거의 완만한 우상향 추세를 따르는 안정적 수준<br>
+        • ⚖️ <b>현상 유지</b>: 과거 실적 평균 수준의 관리 중심 목표 수준<br><br>
+        <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
+        • ⚠️ <b>한계</b>: 목표치가 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.
     </div>
     """, unsafe_allow_html=True)
 
-    # 그래프 시각화
+    # 그래프 시각화 (NameError 방지를 위해 subplot_adjust 수정)
     st.subheader("3. 2029년 중장기 전망 및 목표 수준 시뮬레이션")
     fig, ax = plt.subplots(figsize=(11, 5))
     연도_축 = [f"'{y-2000}" for y in range(2021, 2030)]
     
     ax.plot(연도_축, slope * np.arange(9) + intercept, color='#CBD5E0', linestyle='--', label='중장기 추세선')
-    ax.plot(연도_축[:5], Y[:5], marker='o', color='#2D3748', linewidth=2.5, label='과거 실적')
-    ax.scatter(연도_축[5], 예상_2026, color='#E53E3E', s=200, marker='D', zorder=10, label='2026 예상')
+    ax.plot(연도_축[:5], Y[:5], marker='o', color='#2D6A4F', linewidth=2.5, label='과거 실적')
+    ax.scatter(연도_축[5], 예상_2026, color='#D69E2E', s=200, marker='D', zorder=10, label='2026 예상')
     
     for i, row in df_res.iterrows():
         ax.scatter(연도_축[5], row['최고목표'], s=120, edgecolors='black', label=f"{row['평가방법']}")
 
-    ax.legend(prop=font_prop, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False)
-    plt.subplots_adjust(right=0.75)
+    ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1.0, 1.0))
     st.pyplot(fig)
