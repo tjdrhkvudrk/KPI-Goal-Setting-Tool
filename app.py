@@ -6,7 +6,7 @@ from scipy import stats
 import io
 
 # 1. 페이지 설정
-st.set_page_config(page_title="KPI 목표설정 통합 도구", layout="wide")
+st.set_page_config(page_title="경평 목표설정 통합 도구", layout="wide")
 st.title("🏛️ 경영평가 KPI 목표설정 및 도전성 통합 시뮬레이터")
 
 # 2. 데이터 입력부 (사이드바)
@@ -23,87 +23,113 @@ with st.sidebar:
         val = st.number_input(f"{y}년 실적", value=1.800 + (y-2021)*0.05, format="%.3f")
         y_vals.append(val)
     
-    st.header("⚙️ 환경 및 목표")
-    is_up = st.toggle("상향지표 여부 (실적↑ 좋음)", value=True)
-    user_goal = st.number_input("2026년 설정 목표치", value=float(y_vals[-1] * 1.05))
-    long_term_b = st.number_input("중장기 최종 목표(B)", value=float(y_vals[-1] * 1.2))
-    global_avg = st.number_input("글로벌 우수기관 평균", value=float(y_vals[-1] * 1.15))
+    st.header("⚙️ 지표 성격 설정")
+    # 3가지 선택지 제공
+    ind_type = st.radio("지표 유형 선택", ["상향지표 (실적↑ 좋음)", "하향지표 (실적↓ 좋음)", "일반지표 (평점산식 미적용)"])
+    
+    st.header("🎯 목표 자동 산출 설정")
+    target_logic = st.selectbox("목표치 산출 기준 선택", 
+                                ["목표부여(2편차) 기반", "추세치 분석 기반", "중장기 로드맵 기반", "글로벌 평균 기반"])
 
-# 3. 핵심 계산 엔진 (Error-Free 로직)
+# 3. 핵심 계산 엔진
 Y = np.array(y_vals)
 X = np.array([1, 2, 3, 4, 5])
 avg_5yr = np.mean(Y)
 std_val = np.std(Y, ddof=1)
-base_val = max(Y[-1], np.mean(Y[-3:])) if is_up else min(Y[-1], np.mean(Y[-3:]))
+# 최근실적과 3개년 평균 중 유리한 값 선택
+base_val = max(Y[-1], np.mean(Y[-3:])) if "상향" in ind_type else min(Y[-1], np.mean(Y[-3:]))
 
-# 추세치 분석 및 ZP 계산
-slope, intercept, r_val, p_val, std_err = stats.linregress(X, Y)
+# 평가방법별 목표치 계산
+m_2sig = base_val + (2 * std_val if "상향" in ind_type else -2 * std_val)
+slope, intercept, _, _, _ = stats.linregress(X, Y)
 trend_2026 = intercept + slope * 6
+long_term_goal = base_val * 1.1 # 예시 로직
+
+# 선택된 로직에 따른 목표치 자동 설정
+if "2편차" in target_logic:
+    auto_goal = m_2sig
+elif "추세치" in target_logic:
+    auto_goal = trend_2026
+else:
+    auto_goal = long_term_goal
+
+# 도전성 zp 계산
 y_hat = intercept + slope * X
 s_resid = np.sqrt(np.sum((Y - y_hat)**2) / (5 - 2))
 S_val = max(s_resid * np.sqrt(1 + (1/5) + ((6-3)**2 / np.sum((X-3)**2))), 0.0001)
-
-zp = (user_goal - trend_2026) / S_val if is_up else (trend_2026 - user_goal) / S_val
+zp = (auto_goal - trend_2026) / S_val if "상향" in ind_type else (trend_2026 - auto_goal) / S_val
 challenge_score = (zp / 2.0) * 100
 
-# 최고/최저 목표 및 평점 산출
-goal_high = base_val + (2 * std_val if is_up else -2 * std_val)
-goal_low = base_val - (2 * std_val if is_up else -2 * std_val)
-est_score = np.clip(20 + 80 * ((user_goal - goal_low) / (goal_high - goal_low)) if is_up else 20 + 80 * ((goal_high - user_goal) / (goal_high - goal_low)), 20, 100)
+# 평점 산출 (지표 성격에 따름)
+goal_high = m_2sig
+goal_low = base_val - (2 * std_val if "상향" in ind_type else -2 * std_val)
 
-# 4. 결과 출력
-tab1, tab2, tab3 = st.tabs(["📈 시뮬레이션 결과", "📋 종합 결과표", "📚 산식 가이드"])
+if "상향" in ind_type:
+    est_score = 20 + 80 * ((auto_goal - goal_low) / (goal_high - goal_low))
+elif "하향" in ind_type:
+    est_score = 20 + 80 * ((goal_high - auto_goal) / (goal_high - goal_low))
+else:
+    est_score = 100.0 # 일반지표는 기본 100점 가정
 
-with tab1:
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.subheader("🏁 방법론별 목표치 비교")
-        methods = {
-            "평가방법론": ["목표부여(2편차)", "목표부여(1편차)", "목표부여(120%)", "중장기 목표부여", "글로벌 실적비교", "추세치 평가"],
-            "산출 목표치": [goal_high, base_val + std_val, base_val*1.2, base_val + (long_term_b - base_val)/5, global_avg, trend_2026]
-        }
-        st.table(pd.DataFrame(methods).style.format({"산출 목표치": "{:.3f}"}))
+est_score = np.clip(est_score, 20, 100)
+
+# 4. 화면 출력
+col_main, col_side = st.columns([3, 1])
+
+with col_main:
+    tab1, tab2 = st.tabs(["📈 시뮬레이션 결과", "📋 종합 결과표"])
+    
+    with tab1:
+        st.subheader(f"🏁 평가방법별 산출치 (현재 목표: {auto_goal:.3f})")
+        methods_df = pd.DataFrame({
+            "평가방법": ["목표부여(2편차)", "목표부여(1편차)", "추세치 분석", "중장기 로드맵"],
+            "산출 목표치": [m_2sig, base_val + std_val, trend_2026, long_term_goal]
+        })
+        st.table(methods_df.style.format({"산출 목표치": "{:.3f}"}))
         
+        # 그래프
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=hist_years, y=Y, name="과거 실적", mode='lines+markers'))
-        fig.add_trace(go.Scatter(x=[2026], y=[user_goal], name="내 설정치", marker=dict(size=12, color='red', symbol='star')))
+        fig.add_trace(go.Scatter(x=[2026], y=[auto_goal], name="자동 산출 목표", marker=dict(size=12, color='red', symbol='star')))
         st.plotly_chart(fig, use_container_width=True)
 
-    with col2:
-        st.subheader("🚦 도전성 5단계 진단")
-        if challenge_score >= 100:
-            status, st_func, desc = "🏆 한계 혁신", st.success, "통계적 한계를 돌파한 압도적 성과"
-        elif challenge_score >= 50:
-            status, st_func, desc = "🔥 적극 상향", st.success, "과거 성과를 뛰어넘는 도전적 설정"
-        elif challenge_score >= 25:
-            status, st_func, desc = "📈 소극 개선", st.info, "완만한 개선 의지가 반영된 수준"
-        elif challenge_score >= 0:
-            status, st_func, desc = "⚖️ 현상 유지", st.warning, "과거 추세를 그대로 유지하는 보통 수준"
-        else:
-            status, st_func, desc = "⚠️ 하향 설정", st.error, "추세보다 낮은 목표로 재검토 권고"
-        
-        st_func(f"### {status}")
-        st.metric("도전성 지수", f"{challenge_score:.1f}%")
-        st.write(f"**담당자 조언:** {desc}")
+with col_side:
+    st.subheader("🚩 도전성 범주")
+    # 5단계 범주 표시 전용 UI
+    st.markdown("""
+    | 단계 | 명칭 | 범위 |
+    | :--- | :--- | :--- |
+    | <span style='color:green'>5단계</span> | **한계 혁신** | 100%↑ |
+    | <span style='color:blue'>4단계</span> | **적극 상향** | 50%↑ |
+    | <span style='color:orange'>3단계</span> | **소극 개선** | 25%↑ |
+    | <span style='color:gray'>2단계</span> | **현상 유지** | 0%↑ |
+    | <span style='color:red'>1단계</span> | **하향 설정** | 0%↓ |
+    """)
+    
+    st.divider()
+    
+    # 내 결과 표시
+    if challenge_score >= 100: status, color = "🏆 한계 혁신", "green"
+    elif challenge_score >= 50: status, color = "🔥 적극 상향", "blue"
+    elif challenge_score >= 25: status, color = "📈 소극 개선", "orange"
+    elif challenge_score >= 0: status, color = "⚖️ 현상 유지", "gray"
+    else: status, color = "⚠️ 하향 설정", "red"
+    
+    st.write("### 내 결과")
+    st.title(f":{color}[{status.split()[-1]}]")
+    st.metric("도전성 지수", f"{challenge_score:.1f}%")
 
 with tab2:
-    st.subheader("📅 2026년 경영평가 시뮬레이션 상세 결과표")
-    # 이미지 91881c 양식 반영
+    st.subheader("📅 상세 시뮬레이션 결과표")
     report_df = pd.DataFrame({
-        "사업명": [biz_name], "지표명": [ind_name], "지표성격": ["상향" if is_up else "하향"],
-        "평균실적": [f"{avg_5yr:.3f}"], "표준편차": [f"{std_val:.3f}"], "기준치": [f"{base_val:.3f}"],
-        "최고목표": [f"{goal_high:.3f}"], "최저목표": [f"{goal_low:.3f}"], "설정목표": [f"{user_goal:.3f}"],
-        "예상평점": [f"{est_score:.2f}"], "가중치": [weight], "예상득점": [f"{(est_score*weight/100):.3f}"]
+        "사업명": [biz_name], "지표명": [ind_name], "지표성격": [ind_type.split()[0]],
+        "기준치": [f"{base_val:.3f}"], "최고목표": [f"{goal_high:.3f}"], "산출목표": [f"{auto_goal:.3f}"],
+        "예상평점": [f"{est_score:.2f}"], "예상득점": [f"{(est_score*weight/100):.3f}"]
     })
     st.dataframe(report_df, use_container_width=True)
     
-    # 엑셀 다운로드 기능 (xlsxwriter 필수)
+    # 엑셀 다운로드
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         report_df.to_excel(writer, index=False, sheet_name='Result')
-    st.download_button(label="📥 시뮬레이션 결과 엑셀 다운로드", data=output.getvalue(), file_name="KPI_Simulation.xlsx")
-
-with tab3:
-    st.subheader("🧮 적용 산식 가이드")
-    st.latex(r"z_p = \frac{Y_p - Y_s}{S}")
-    st.latex(r"S = \sqrt{\frac{\sum(Y_i - \hat{Y_i})^2}{n-2} \times \left[ 1 + \frac{1}{n} + \frac{(X_p - \bar{X})^2}{\sum(X_i - \bar{X})^2} \right]}")
+    st.download_button(label="📥 엑셀 다운로드", data=output.getvalue(), file_name="KPI_Result.xlsx")
