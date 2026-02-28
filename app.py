@@ -12,7 +12,51 @@ past_years = [current_year - i for i in range(5, 0, -1)]  # [2021, 2022, 2023, 2
 
 st.title("⚖️ 경영평가 계량지표 통합 시뮬레이터")
 
-# 사이드바: 기본 설정
+# 시각적 개선을 위한 CSS: 글자색 강화 및 높이 정렬
+st.markdown("""
+<style>
+    /* 자동 계산 항목(disabled)의 글자색을 검정색으로 강제 변경 */
+    input:disabled {
+        -webkit-text-fill-color: #000000 !important;
+        color: #000000 !important;
+        font-weight: 500 !important;
+        background-color: #f8f9fa !important;
+        opacity: 1 !important;
+    }
+    
+    /* 대분류 헤더 디자인 */
+    .main-header-box {
+        background-color: #f0f2f6;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        font-weight: bold;
+        border: 1px solid #d1d5db;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 60px; /* 제목 행 높이 통일 */
+        margin-bottom: 5px;
+    }
+    
+    /* 소분류 라벨 디자인 (연도 등) */
+    .sub-label-text {
+        text-align: center;
+        font-size: 0.9em;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 8px;
+        height: 20px;
+    }
+
+    /* 입력칸 높이 및 폰트 통일 */
+    .stNumberInput, .stTextInput {
+        margin-top: -5px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# 사이드바 설정
 st.sidebar.header("📍 지표 기본 설정")
 indicator_name = st.sidebar.text_input("지표명", value="주요사업 성과지표")
 weight = st.sidebar.number_input("가중치", value=5.000, format="%.3f")
@@ -23,80 +67,53 @@ global_perf = st.sidebar.number_input("글로벌 실적(비교군 평균)", valu
 # 1. 실적 데이터 입력 섹션
 st.subheader("1. 실적 데이터 입력")
 
-# 디자인을 위한 CSS: 높이 통합 및 중앙 정렬
-st.markdown("""
-<style>
-    .full-height-header {
-        background-color: #f0f2f6;
-        padding: 10px;
-        border-radius: 5px;
-        text-align: center;
-        font-weight: bold;
-        border: 1px solid #d1d5db;
-        height: 78px; /* 좌측 2단 높이와 유사하게 수동 조정 */
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 10px;
-    }
-    .group-main-header {
-        background-color: #f0f2f6;
-        padding: 5px;
-        border-radius: 5px 5px 0 0;
-        text-align: center;
-        font-weight: bold;
-        border: 1px solid #d1d5db;
-        margin-bottom: 5px;
-    }
-    .sub-label {
-        text-align: center;
-        font-size: 0.85em;
-        font-weight: bold;
-        color: #555;
-        margin-bottom: 5px;
-    }
-</style>
-""", unsafe_allow_html=True)
+# 대분류 레이아웃 (좌측 6칸: 과거실적 / 우측 각 1칸씩 독립열)
+header_cols = st.columns([6, 1, 1, 1])
+with header_cols[0]:
+    st.markdown('<div class="main-header-box">과거 5개년 실적</div>', unsafe_allow_html=True)
+with header_cols[1]:
+    st.markdown('<div class="main-header-box">과거 3개년 평균</div>', unsafe_allow_html=True)
+with header_cols[2]:
+    st.markdown('<div class="main-header-box">기준치</div>', unsafe_allow_html=True)
+with header_cols[3]:
+    st.markdown('<div class="main-header-box">2026년 예상실적</div>', unsafe_allow_html=True)
 
-# 메인 레이아웃 구성 (좌측 6칸: 과거5개년 그룹 / 우측 각 1칸씩 독립열)
-main_cols = st.columns([6, 1, 1, 1])
+# 데이터 입력 행 레이아웃 (9개 열)
+data_cols = st.columns(9)
 
-# --- [좌측] 과거 5개년 실적 그룹 (2단 구성) ---
-with main_cols[0]:
-    st.markdown('<div class="group-main-header">과거 5개년 실적</div>', unsafe_allow_html=True)
-    sub_cols = st.columns(6)
-    hist = []
-    for i, year in enumerate(past_years):
-        with sub_cols[i]:
-            st.markdown(f'<div class="sub-label">{year}년</div>', unsafe_allow_html=True)
-            val = st.number_input(f"{year}년", label_visibility="collapsed", value=100.000 + (i*5), format="%.3f", key=f"hist_{i}")
-            hist.append(val)
-    
-    # 통계 자동 계산
-    std_5y = np.std(hist)
-    avg_3y = np.mean(hist[-3:])
-    last_year_val = hist[-1]
-    
-    with sub_cols[5]:
-        st.markdown('<div class="sub-label">5개년 표준편차</div>', unsafe_allow_html=True)
-        st.text_input("표준편차", value=f"{std_5y:.3f}", label_visibility="collapsed", disabled=True)
+# [과거 5개년 실적 입력부]
+hist = []
+for i, year in enumerate(past_years):
+    with data_cols[i]:
+        st.markdown(f'<div class="sub-label-text">{year}년</div>', unsafe_allow_html=True)
+        val = st.number_input(f"{year}실적", label_visibility="collapsed", value=100.000 + (i*5), format="%.3f", key=f"h_{i}")
+        hist.append(val)
 
-# --- [우측] 독립 열들 (통합 높이 헤더 + 입력창) ---
-with main_cols[1]:
-    st.markdown('<div class="full-height-header">과거 3개년 평균</div>', unsafe_allow_html=True)
-    st.text_input("평균값", value=f"{avg_3y:.3f}", label_visibility="collapsed", disabled=True)
+# 자동 계산 값 준비
+std_5y = np.std(hist)
+avg_3y = np.mean(hist[-3:])
+last_year_val = hist[-1]
+base_val = max(avg_3y, last_year_val) if direction == "상향" else min(avg_3y, last_year_val)
 
-with main_cols[2]:
-    # 기준치 결정 로직
-    base_val = max(avg_3y, last_year_val) if direction == "상향" else min(avg_3y, last_year_val)
-    st.markdown('<div class="full-height-header">기준치</div>', unsafe_allow_html=True)
+# [자동 계산 및 독립 열 입력부]
+with data_cols[5]:
+    st.markdown('<div class="sub-label-text">5개년 표준편차</div>', unsafe_allow_html=True)
+    st.text_input("표준편차", value=f"{std_5y:.3f}", label_visibility="collapsed", disabled=True)
+
+with data_cols[6]:
+    st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True) # 높이 맞춤용 공백
+    st.text_input("3개년평균값", value=f"{avg_3y:.3f}", label_visibility="collapsed", disabled=True)
+
+with data_cols[7]:
+    st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True)
     st.text_input("기준치값", value=f"{base_val:.3f}", label_visibility="collapsed", disabled=True)
 
-with main_cols[3]:
-    st.markdown(f'<div class="full-height-header">{current_year}년 예상실적</div>', unsafe_allow_html=True)
-    est = st.number_input("예상실적", value=base_val * 1.05, format="%.3f", label_visibility="collapsed")
+with data_cols[8]:
+    st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True)
+    est = st.number_input("예상실적입력", value=base_val * 1.05, format="%.3f", label_visibility="collapsed")
 
 # --- 분석 실행 및 결과 ---
+st.markdown("---")
 if st.button("🚀 모든 평가방법 통합 분석 실행"):
     lt_base = base_val + (long_term_goal - base_val) / 4
     methods = [
@@ -123,7 +140,6 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
     st.subheader("2. 평가방법별 비교 분석 결과")
     st.dataframe(df.style.format({k: "{:.3f}" for k in df.columns if k != "평가방법"}).highlight_max(axis=0, subset=['예상평점']), use_container_width=True)
 
-    # 시각화
     fig, ax = plt.subplots(figsize=(10, 4))
     x = np.arange(len(df))
     ax.bar(x - 0.2, df['최고목표'], 0.4, label='최고목표', color='skyblue')
