@@ -27,34 +27,31 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. 디자인 설정 (글씨 크기 15px로 확대 및 인덱스 제거)
+# 2. 디자인 설정 (15px 통일 및 인덱스 제거)
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
-    /* 전체 글꼴 크기 상향 */
     html, body, [class*="st-"] { font-size: 15px !important; }
-    
-    /* 표 스타일 설정 */
     table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse; }
     th { background-color: #4A5568 !important; color: white !important; font-size: 15px !important; font-weight: bold !important; text-align: center !important; border: 1px solid #dee2e6 !important; height: 55px; }
     td { font-size: 15px !important; text-align: center !important; border: 1px solid #dee2e6 !important; background-color: white !important; height: 45px; }
     
-    /* 인덱스 열(가장 왼쪽 열) 삭제 */
+    /* 인덱스 열 숨기기 */
     thead tr th:first-child { display: none; }
     tbody tr th { display: none; }
 
-    /* 입력창 및 기타 요소 */
     div[data-testid="stNumberInput"] input { font-size: 15px !important; text-align: center !important; height: 45px !important; }
     .header-box { color: white; padding: 10px; text-align: center; font-weight: bold; font-size: 15px !important; border: 1px solid #dee2e6; min-height: 55px; display: flex; align-items: center; justify-content: center; }
     .highlight-input input { background-color: #FFFBEB !important; font-weight: bold !important; color: #D69E2E !important; }
     .auto-calc { background-color: #F7FAFC !important; color: #4A5568 !important; border: 1px solid #E2E8F0; border-radius: 4px; padding: 10px; text-align: center; font-size: 15px; font-weight: bold; height: 45px; display: flex; align-items: center; justify-content: center; }
-    .footer-note { font-size: 14px; color: #4A5568; margin-top: 15px; line-height: 1.6; padding: 20px; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; }
+    .footer-note { font-size: 14px; color: #4A5568; margin-top: 15px; line-height: 1.7; padding: 25px; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; }
+    .step-title { font-weight: bold; color: #2D3748; display: inline-block; width: 100px; }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("⚖️ 중장기 성과지표 목표설정 및 한계점 분석기")
 
-# 3. 데이터 입력 및 자동 계산 (2021~2029)
+# 3. 데이터 입력 및 자동 계산
 st.sidebar.header("📍 지표 기본 설정")
 가중치_값 = st.sidebar.number_input("가중치", value=5.000, format="%.3f")
 지표방향 = st.sidebar.selectbox("지표 방향", ["상향", "하향"])
@@ -89,8 +86,6 @@ for i, year in enumerate([2027, 2028, 2029]):
         st.markdown(f'<div class="auto-calc">{calc_val:.3f}</div>', unsafe_allow_html=True)
 
 전체_실적 = 실적_리스트 + [예상_2026] + 미래_실적
-
-# 기초 통계 계산
 평균_3년 = float(np.mean(실적_리스트[-4:-1]))
 표준편차_3년 = float(np.std(실적_리스트[-4:-1]))
 직전_실적 = float(실적_리스트[-1])
@@ -114,6 +109,7 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
     ]
 
     결과_데이터 = []
+    # 오차(변동성) 계산
     오차 = max(np.std(Y_base), 기준치 * 0.1)
     추세예상치_2026 = Y_base[-1]
 
@@ -121,9 +117,10 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         최저 = 기준치 * 0.8 if 지표방향=="상향" else 기준치 * 1.2
         평점 = max(20.0, min(100.0, 20 + 80 * ((예상_2026 - 최저) / (최고 - 최저))))
         
-        # 도전성 단계 판정
+        # 도전성 단계 판정 (Z-Score 기반 수치 적용)
         zp = (최고 - 추세예상치_2026) / 오차 if 지표방향=="상향" else (추세예상치_2026 - 최고) / 오차
         도전성_지수 = (zp / 2.0) * 100
+        
         if 도전성_지수 >= 150: 단계 = "🏆 한계 혁신"
         elif 도전성_지수 >= 80: 단계 = "🔥 적극 상향"
         elif 도전성_지수 >= 40: 단계 = "📈 소극 개선"
@@ -147,17 +144,17 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         "예상평점": "{:.2f}", "가중치": "{:.3f}", "예상득점": "{:.3f}"
     }))
     
-    # [요청 반영] 4단계별 설명이 추가된 가이드
+    # [요청 반영] 구체적 수치 수준이 포함된 가이드
     st.markdown("""
     <div class="footer-note">
-        <b>💡 분석 지표 상세 가이드</b><br><br>
+        <b>💡 분석 지표 수치 근거 가이드</b><br><br>
         <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
-        &nbsp;&nbsp;• <b>🏆 한계 혁신:</b> 과거의 흐름을 완전히 벗어난 파격적 목표로, 조직 역량의 대전환이 필요한 수준입니다.<br>
-        &nbsp;&nbsp;• <b>🔥 적극 상향:</b> 과거 성장세를 상회하는 공격적 목표로, 성과 창출을 위한 적극적 노력이 수반됩니다.<br>
-        &nbsp;&nbsp;• <b>📈 소극 개선:</b> 과거의 완만한 우상향 추세를 따르는 수준으로, 통상적인 노력으로 달성 가능합니다.<br>
-        &nbsp;&nbsp;• <b>⚖️ 현상 유지:</b> 과거 실적 평균 수준의 목표로, 도전성보다는 안정적 관리에 치중한 상태입니다.<br><br>
+        &nbsp;&nbsp;• <span class="step-title">🏆 한계 혁신</span> : <b>도전성 지수 150% 이상.</b> 추세 예상치 대비 표준편차의 3배 이상 상향된 파격적 수준입니다.<br>
+        &nbsp;&nbsp;• <span class="step-title">🔥 적극 상향</span> : <b>도전성 지수 80~150% 미만.</b> 추세 대비 유의미한 상향(표준편차 1.6~3배)이 이루어진 공격적 수준입니다.<br>
+        &nbsp;&nbsp;• <span class="step-title">📈 소극 개선</span> : <b>도전성 지수 40~80% 미만.</b> 과거의 완만한 성장 흐름(표준편차 0.8~1.6배)을 안정적으로 따르는 수준입니다.<br>
+        &nbsp;&nbsp;• <span class="step-title">⚖️ 현상 유지</span> : <b>도전성 지수 40% 미만.</b> 과거 평균 실적 범위 내의 목표로, 도전보다는 관리 중심의 수준입니다.<br><br>
         <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
-        &nbsp;&nbsp;• <b>⚠️ 한계:</b> 목표치가 표준편차의 3배를 초과하거나 기준치 대비 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.
+        &nbsp;&nbsp;• <b>⚠️ 한계:</b> 목표치가 <b>과거 3개년 표준편차의 3배(3σ)를 초과</b>하거나, 기준치 대비 <b>30% 이상 급변</b>하여 물리적 한계점에 도달한 상태입니다.
     </div>
     """, unsafe_allow_html=True)
 
