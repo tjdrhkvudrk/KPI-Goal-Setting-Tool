@@ -62,7 +62,7 @@ with st.sidebar:
 st.title("⚖️ 성과지표 목표 설정 시뮬레이터")
 
 # 1. 실적 전망 섹션
-st.subheader("1. 과거 5개년 및 2026년 실적 기반 중장기 실적 전망")
+st.subheader("1. 과거 실적 기반 중장기 실적 전망")
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
 
@@ -81,8 +81,8 @@ slope_p, intercept_p = np.polyfit(X_past, Y_past, 1)
 suggested_2026 = round(slope_p * 5 + intercept_p, 3)
 
 with m_cols[1]:
-    st.markdown('<div class="main-header bg-current">2026년 (예상치)</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">추세 기반 자동입력</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header bg-current">2026년 (예상)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">추세 자동계산</div>', unsafe_allow_html=True)
     예상_2026 = st.number_input("curr_2026", value=suggested_2026, step=0.001, format="%.3f", key="v_2026")
 
 with m_cols[2]:
@@ -100,21 +100,11 @@ with m_cols[2]:
 
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
-전망_데이터 = [예상_2026] + 미래_전망
-avg_f, std_f = round(np.mean(전망_데이터), 3), round(np.std(전망_데이터), 3)
 
-st.markdown(f"""
-<div class="guide-box">
-    <span class="guide-title">📑 실적 분석 참고내용</span>
-    • <b>과거 3개년 실적 분석결과:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[-3])**(1/2)-1)*100, 3) if 실적_리스트[-3]!=0 else 0:.3f}%<br>
-    • <b>과거 5개년 실적 분석결과:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[0])**(1/4)-1)*100, 3) if 실적_리스트[0]!=0 else 0:.3f}%<br>
-    • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, 표준편차 {std_f:.3f}, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3) if 예상_2026!=0 else 0:.3f}%
-</div>
-""", unsafe_allow_html=True)
-
+st.markdown(f"**📑 실적 분석 데이터 요약:** 과거 5개년 평균 {avg5:.3f} (표준편차 {std5:.3f}) / 최근 3개년 평균 {avg3:.3f}")
 st.markdown("---")
 
-# 전체 분석 버튼
+# 분석 실행 버튼
 if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     
@@ -134,15 +124,14 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
         최저 = round(기준치 * 0.8 if 지표방향=="상향" else 기준치 * 1.2, 3)
         denom = (최고 - 최저) if (최고 - 최저) != 0 else 1
         평점 = round(max(20.0, min(100.0, 20 + 80 * ((예상_2026 - 최저) / denom))), 3)
-        zp = (최고 - 예상_2026) / 오차 if 지표방향=="상향" else (예상_2026 - 최고) / 오차
-        도전성_지수 = round((zp / 2.0) * 100, 3)
+        도전성_지수 = round(((최고 - 예상_2026) / 오차 if 지표방향=="상향" else (예상_2026 - 최고) / 오차) / 2.0 * 100, 3)
         단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지"
         판정 = "✅ 유지" if (abs(최고 - 기준치) <= (3 * std3) and abs(최고/기준치 - 1) <= 0.3) else "⚠️ 한계"
         결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
-    # 2. 평가방법별 목표 도전성 비교
+    # 2. 결과 테이블
     st.subheader("2. 평가방법별 목표 도전성 비교")
-    html_table = f"""
+    st.markdown(f"""
     <table style="width:100%; border-collapse: collapse; text-align: center;">
         <thead>
             <tr style="background-color: #4A5568; color: white;">
@@ -153,59 +142,50 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
             <tr><td rowspan="4" class="merged-cell">목표부여</td><td>{결과_데이터[0]['평가방법']}</td><td>{결과_데이터[0]['기준치']:.3f}</td><td>{결과_데이터[0]['최고목표']:.3f}</td><td>{결과_데이터[0]['예상평점']:.3f}</td><td>{결과_데이터[0]['예상득점']:.3f}</td><td>{결과_데이터[0]['도전성 단계']}</td><td>{결과_데이터[0]['분석결과']}</td></tr>
             <tr><td>{결과_데이터[1]['평가방법']}</td><td>{결과_데이터[1]['기준치']:.3f}</td><td>{결과_데이터[1]['최고목표']:.3f}</td><td>{결과_데이터[1]['예상평점']:.3f}</td><td>{결과_데이터[1]['예상득점']:.3f}</td><td>{결과_데이터[1]['도전성 단계']}</td><td>{결과_데이터[1]['분석결과']}</td></tr>
             <tr><td>{결과_데이터[2]['평가방법']}</td><td>{결과_데이터[2]['기준치']:.3f}</td><td>{결과_데이터[2]['최고목표']:.3f}</td><td>{결과_데이터[2]['예상평점']:.3f}</td><td>{결과_데이터[2]['예상득점']:.3f}</td><td>{결과_데이터[2]['도전성 단계']}</td><td>{결과_데이터[2]['분석결과']}</td></tr>
-            <tr><td>{결과_데이터[3]['평가방법']}</td><td>{결과_데이터[3]['기준치']:.3f}</td><td>{결과_데이터[3]['최고목표']:.3f}</td><td>{결과_데이터[3]['예상평점']:.3f}</td><td>{결과_데이터[3]['예상득점']:.3f}</td><td>{결과_데이터[3]['도전성 단계']}</td><td>{결과_데이터[3]['분석결과']}</td></tr>
+            <tr><td>{결과_DATA[3]['평가방법'] if '결과_DATA' not in locals() else 결과_데이터[3]['평가방법']}</td><td>{결과_데이터[3]['기준치']:.3f}</td><td>{결과_데이터[3]['최고목표']:.3f}</td><td>{결과_데이터[3]['예상평점']:.3f}</td><td>{결과_데이터[3]['예상득점']:.3f}</td><td>{결과_데이터[3]['도전성 단계']}</td><td>{결과_데이터[3]['분석결과']}</td></tr>
             <tr style="border-top: 2px solid #4A5568;"><td rowspan="3" class="merged-cell" style="background-color: #EBF8FF;">시나리오 분석</td><td>{결과_데이터[4]['평가방법']}</td><td>{결과_데이터[4]['기준치']:.3f}</td><td>{결과_데이터[4]['최고목표']:.3f}</td><td>{결과_데이터[4]['예상평점']:.3f}</td><td>{결과_데이터[4]['예상득점']:.3f}</td><td>{결과_데이터[4]['도전성 단계']}</td><td>{결과_데이터[4]['분석결과']}</td></tr>
             <tr><td>{결과_데이터[5]['평가방법']}</td><td>{결과_데이터[5]['기준치']:.3f}</td><td>{결과_데이터[5]['최고목표']:.3f}</td><td>{결과_데이터[5]['예상평점']:.3f}</td><td>{결과_데이터[5]['예상득점']:.3f}</td><td>{결과_데이터[5]['도전성 단계']}</td><td>{결과_데이터[5]['분석결과']}</td></tr>
             <tr><td>{결과_데이터[6]['평가방법']}</td><td>{결과_데이터[6]['기준치']:.3f}</td><td>{결과_데이터[6]['최고목표']:.3f}</td><td>{결과_데이터[6]['예상평점']:.3f}</td><td>{결과_데이터[6]['예상득점']:.3f}</td><td>{결과_데이터[6]['도전성 단계']}</td><td>{결과_데이터[6]['분석결과']}</td></tr>
         </tbody>
     </table>
-    """
-    st.markdown(html_table, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-    # [복구 및 강화] 가이드 박스 내 시나리오 설명 추가
+    # [수정] 불필요한 기호 제거 및 명확한 시나리오 식 제시
     st.markdown(f"""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
         <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
-        • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 경우로 파격적 목표 수준<br>
-        • 🔥 <b>적극 상향</b>: 과거 변동폭의 1.6배~3배 수준으로 공격적 목표 수준<br>
-        • 📈 <b>소극 개선</b>: 과거 변동 범위 내에 존재하며 완만한 우상향 추세를 따르는 수준<br>
-        • ⚖️ <b>현상 유지</b>: 관리 중심 목표 수준<br><br>
-        <b>2. 시나리오 분석 정의 (통계적 근거)</b><br>
-        • 🔵 <b>도전 시나리오</b>: 선형 추세치에 과거 5개년 표준편차($\sigma$)의 1.5배를 가산한 공격적 전망<br>
-        • ⚪ <b>유지 시나리오</b>: 과거 6개년(과거5년+2026년예상)의 흐름을 반영한 정교한 선형 추세 전망<br>
-        • 🟡 <b>보수 시나리오</b>: 선형 추세치에서 과거 5개년 표준편차($\sigma$)의 1.0배를 감산한 안정적 전망<br><br>
-        <b>3. 추세치 분석결과 (한계 판정 기준)</b><br>
-        • ⚠️ <b>한계</b>: 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미
+        • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 파격적 목표 수준<br>
+        • 🔥 <b>적극 상향</b>: 과거 변동폭의 1.6배에서 3배 수준의 공격적 목표 수준<br>
+        • 📈 <b>소극 개선</b>: 과거 변동 범위 내에 존재하는 완만한 우상향 목표 수준<br>
+        • ⚖️ <b>현상 유지</b>: 단순 관리 중심의 목표 수준<br><br>
+        <b>2. 시나리오 분석 산출식</b><br>
+        • 🔵 <b>도전 시나리오</b>: 선형 추세치 + (과거 표준편차 × 1.5)<br>
+        • ⚪ <b>유지 시나리오</b>: 과거 흐름을 반영한 기본 선형 추세치 (y = ax + b)<br>
+        • 🟡 <b>보수 시나리오</b>: 선형 추세치 - (과거 표준편차 × 1.0)<br><br>
+        <b>3. 분석 결과 판정 기준</b><br>
+        • ⚠️ <b>한계</b>: 과거 표준편차의 3배를 초과하거나, 기준치 대비 30% 이상 급변하여 역량상 임계점에 도달함을 의미
     </div>
     """, unsafe_allow_html=True)
 
-    # 3. 중장기 추세 및 시나리오별 목표 궤적 분석
+    # 3. 그래프
     st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
     years_all = [f"'{y-2000}" for y in range(2021, 2030)]
     years_past = years_all[:6]
     years_future = years_all[5:]
-    idx_future = np.arange(6, 10)
-    base_trend = slope_f * idx_future + intercept_f
-    
-    line_challenge = [예상_2026] + list(base_trend[1:] + (std5 * 1.5 if 지표방향=="상향" else -std5 * 1.5))
-    line_maintain = [예상_2026] + list(base_trend[1:])
-    line_conservative = [예상_2026] + list(base_trend[1:] - (std5 * 1.0 if 지표방향=="상향" else -std5 * 1.0))
+    line_challenge = [예상_2026] + list((slope_f * np.arange(7, 10) + intercept_f) + (std5 * 1.5 if 지표방향=="상향" else -std5 * 1.5))
+    line_maintain = [예상_2026] + list(slope_f * np.arange(7, 10) + intercept_f)
+    line_conservative = [예상_2026] + list((slope_f * np.arange(7, 10) + intercept_f) - (std5 * 1.0 if 지표방향=="상향" else -std5 * 1.0))
 
     fig, ax = plt.subplots(figsize=(13, 6.5))
-    
-    # 플로팅 순서 조정
     ax.plot(years_future, line_challenge, color='#3182CE', linestyle='--', linewidth=2, label='도전 시나리오', zorder=2)
     ax.plot(years_future, line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오', zorder=2)
     ax.plot(years_future, line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오', zorder=2)
-    
     for row in 결과_데이터:
         if row['구분'] == "목표부여":
             ax.scatter(years_all[5], row['최고목표'], s=120, zorder=12, edgecolors='white', linewidth=1, label=f"{row['평가방법']}")
-
     ax.scatter(years_all[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=15)
     ax.plot(years_past, Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=20)
-
     ax.fill_between(years_future, line_conservative, line_challenge, color='#EBF8FF', alpha=0.3)
     ax.plot(years_all, slope_f * np.arange(9) + intercept_f, color='#EDF2F7', linestyle=':', zorder=1)
 
@@ -216,6 +196,5 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
         ax.legend([handles[i] for i in new_order], [labels[i] for i in new_order], prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
     except:
         ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1))
-    
     ax.grid(axis='y', linestyle='-', alpha=0.1)
     st.pyplot(fig)
