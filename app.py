@@ -6,7 +6,7 @@ import matplotlib.font_manager as fm
 import os
 import requests
 
-# 1. 한글 폰트 및 설정 (기존 로직 유지)
+# 1. 한글 폰트 설정
 @st.cache_resource
 def load_korean_font():
     font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (기존의 모든 스타일 완벽 복구)
+# 2. CSS 디자인 (원본 스타일 유지)
 st.set_page_config(page_title="계량 성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -48,7 +48,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 사이드바 UI (가중치 옆 단위 삭제 반영)
+# 3. 사이드바 (가중치 단위 삭제)
 with st.sidebar:
     st.markdown('<span class="sidebar-label">📌 지표명</span>', unsafe_allow_html=True)
     지표명 = st.text_input("kpi_name", value="전략 KPI")
@@ -61,9 +61,7 @@ with st.sidebar:
 
 st.title("📊 계량 성과지표 목표 설정 및 중장기 전망 시뮬레이터")
 
-# ----------------------------------------------------------------
-# 1. 과거 실적 섹션 (원본 로직 및 문구 복구)
-# ----------------------------------------------------------------
+# 1. 실적 전망 (1번 복구)
 st.subheader("1. 과거 5개년 및 2026년 실적 기반 중장기 실적 전망")
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
@@ -99,29 +97,23 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# 상세 통계 및 설명 문구 복구
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
 전망_데이터 = [예상_2026] + 미래_전망
-avg_f, std_f = round(np.mean(전망_데이터), 3), round(np.std(전망_데이터), 3)
-cagr_3 = round(((실적_리스트[-1]/실적_리스트[-3])**(1/2)-1)*100, 3) if 실적_리스트[-3]!=0 else 0
-cagr_5 = round(((실적_리스트[-1]/실적_리스트[0])**(1/4)-1)*100, 3) if 실적_리스트[0]!=0 else 0
 cagr_f = round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3) if 예상_2026!=0 else 0
 
 st.markdown(f"""
 <div class="guide-box">
     <span class="guide-title">📑 실적 분석 참고내용</span>
-    • <b>과거 3개년 실적 분석결과:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {cagr_3:.3f}%<br>
-    • <b>과거 5개년 실적 분석결과:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {cagr_5:.3f}%<br>
-    • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, 표준편차 {std_f:.3f}, 연평균 증가율 {cagr_f:.3f}%
+    • <b>과거 3개년 실적 분석결과:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}<br>
+    • <b>과거 5개년 실적 분석결과:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}<br>
+    • <b>중장기 전망 분석결과:</b> 연평균 증가율 {cagr_f:.3f}%
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# ----------------------------------------------------------------
-# 2. 결과 테이블 (원본 판정 로직 및 상세 가이드 복구)
-# ----------------------------------------------------------------
+# 2. 도전성 비교 테이블 (2번 복구)
 기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
 방법별 = [
     ("목표부여", "목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -145,7 +137,6 @@ for 분류, 명칭, 최고 in 방법별:
     결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
 st.subheader("2. 평가방법별 목표 도전성 비교")
-# 병합된 테이블 레이아웃 완벽 복구
 html_table = f"""
 <table style="width:100%; border-collapse: collapse; text-align: center;">
     <thead><tr style="background-color: #4A5568; color: white;"><th>구분</th><th>평가방법</th><th>기준치</th><th>최고목표</th><th>예상평점</th><th>예상득점</th><th>도전성 단계</th><th>분석결과</th></tr></thead>
@@ -162,27 +153,7 @@ html_table = f"""
 """
 st.markdown(html_table, unsafe_allow_html=True)
 
-# 사라졌던 상세 가이드 문구 100% 복구
-st.markdown(f"""
-<div class="guide-box">
-    <span class="guide-title">💡 분석 지표 가이드</span>
-    <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
-    • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 경우로, 과거의 흐름을 완전히 벗어난 파격적 목표 수준<br>
-    • 🔥 <b>적극 상향</b>: 목표치가 과거 변동폭의 1.6배~3배 수준으로, 과거 성장세를 상회하는 공격적 목표 수준<br>
-    • 📈 <b>소극 개선</b>: 목표치가 과거 변동 범위 내에 존재하며, 과거의 완만한 우상향 추세를 따르는 안정적 수준<br>
-    • ⚖️ <b>현상 유지</b>: 목표치가 예상 실적과 유사하거나 과거 평균 수준에 머무르는 경우로, 관리 중심 목표 수준<br><br>
-    <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
-    • ⚠️ <b>한계</b>: 목표치가 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.<br><br>
-    <b>3. 시나리오 분석 산식 및 평가 기준 (추이 분석 기반)</b><br>
-    • <b>도전 시나리오:</b> 과거 5개년 추세선 상의 2026년 기대값 {"+" if 지표방향=="상향" else "-"} (과거 5개년 표준편차 × 1.5). 과거 최대 변동폭 이상의 성과를 가정한 수준입니다.<br>
-    • <b>유지 시나리오:</b> 회귀 분석 추세선에 따른 2026년 예측값. 과거의 성장 흐름이 그대로 지속될 때의 기대 수준입니다.<br>
-    • <b>보수 시나리오:</b> 과거 5개년 추세선 상의 2026년 기대값 {"-" if 지표방향=="상향" else "+"} (과거 5개년 표준편차 × 1.0). 대내외 여건 악화로 성장이 정체될 경우를 가정한 수준입니다.
-</div>
-""", unsafe_allow_html=True)
-
-# ----------------------------------------------------------------
-# 3. 그래프 (목표부여 점 표기 및 스타일 완벽 복구)
-# ----------------------------------------------------------------
+# 3. 그래프 (포인트 복구 핵심!)
 st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
 years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
 idx_future = np.arange(6, 10)
@@ -198,41 +169,38 @@ ax.plot(years_all_label[5:], line_challenge, color='#3182CE', linestyle='--', li
 ax.plot(years_all_label[5:], line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오')
 ax.plot(years_all_label[5:], line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오')
 
-# 사라졌던 목표부여 산점도 점들 복구
+# 사라졌던 목표부여 점들을 다시 찍어주는 코드 (복구 완료)
+colors = ['#E53E3E', '#DD6B20', '#38A169', '#805AD5']
 for i, row in enumerate(결과_데이터):
     if row['구분'] == "목표부여":
-        ax.scatter(years_all_label[5], row['최고목표'], s=120, zorder=12, edgecolors='white', linewidth=1)
+        ax.scatter(years_all_label[5], row['최고목표'], s=150, color=colors[i % 4], label=row['평가방법'], zorder=30, edgecolors='white')
 
 ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
 ax.set_xticks(years_all_label)
 ax.grid(axis='y', linestyle='-', alpha=0.1)
 st.pyplot(fig)
 
-# ----------------------------------------------------------------
-# 4. 담당자 제언 (튕김 해결 + 카드 디자인 노출 해결)
-# ----------------------------------------------------------------
+# 4. 담당자 제언 (튕김 해결 + 카드 디자인)
 st.markdown("---")
 st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
 
-# 드롭다운 선택 시 1번으로 돌아가는 문제 해결 (Session State)
-if 'final_idx' not in st.session_state: st.session_state.final_idx = 4
-if 'comp_idx' not in st.session_state: st.session_state.comp_idx = 5
+if 'f_idx' not in st.session_state: st.session_state.f_idx = 4
+if 'c_idx' not in st.session_state: st.session_state.c_idx = 5
 
-c_sel1, c_sel2 = st.columns(2)
-with c_sel1:
-    선택방법 = st.selectbox("🎯 담당자 최종 선택", [r['평가방법'] for r in 결과_데이터], index=st.session_state.final_idx, key="final_sel")
-    st.session_state.final_idx = [r['평가방법'] for r in 결과_데이터].index(선택방법)
-with c_sel2:
-    비교방법 = st.selectbox("⚖️ 비교 대상 (대조군)", [r['평가방법'] for r in 결과_데이터], index=st.session_state.comp_idx, key="comp_sel")
-    st.session_state.comp_idx = [r['평가방법'] for r in 결과_데이터].index(비교방법)
+c1, c2 = st.columns(2)
+with c1:
+    선택방법 = st.selectbox("🎯 담당자 최종 선택", [r['평가방법'] for r in 결과_데이터], index=st.session_state.f_idx, key="box_f")
+    st.session_state.f_idx = [r['평가방법'] for r in 결과_데이터].index(선택방법)
+with c2:
+    비교방법 = st.selectbox("⚖️ 비교 대상 (대조군)", [r['평가방법'] for r in 결과_DATA_2 := 결과_데이터], index=st.session_state.c_idx, key="box_c")
+    st.session_state.c_idx = [r['평가방법'] for r in 결과_데이터].index(비교방법)
 
 sel = next(item for item in 결과_데이터 if item["평가방법"] == 선택방법)
 comp = next(item for item in 결과_데이터 if item["평가방법"] == 비교방법)
 gap = round(abs(sel['최고목표'] - comp['최고목표']), 3)
 sigma_lv = round(abs(sel['최고목표'] - 예상_2026) / std5, 2) if std5 != 0 else 0
-improvement_rate = round((abs(sel['최고목표'] - 예상_2026) / 예상_2026) * 100, 2) if 예상_2026 != 0 else 0
+imp_rate = round((abs(sel['최고목표'] - 예상_2026) / 예상_2026) * 100, 2) if 예상_2026 != 0 else 0
 
-# HTML 태그 노출 문제 해결 (unsafe_allow_html=True)
 st.markdown(f"""
 <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -252,15 +220,14 @@ st.markdown(f"""
         </div>
         <div style="text-align: center; padding: 15px; background-color: #f7fafc; border-radius: 10px;">
             <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">예상 대비 증감</div>
-            <div style="font-size: 18px; font-weight: 800; color: #e53e3e;">{improvement_rate}%</div>
+            <div style="font-size: 18px; font-weight: 800; color: #e53e3e;">{imp_rate}%</div>
         </div>
     </div>
     <div style="line-height: 1.8; color: #4a5568; border-top: 1px solid #edf2f7; padding-top: 20px;">
         <p><b>[보고서용 목표 설정 근거 초안]</b></p>
         1. 본 지표의 목표치(<b>{sel['최고목표']:.3f}</b>)는 예상 실적 대비 과거 5개년 변동폭의 <b>{sigma_lv}배</b> 수준으로, 
         단순 추세 연장을 탈피한 <b>{sel['도전성 단계']}</b> 목표임을 확인하였습니다.<br>
-        2. 대안 모델인 '{비교방법}({comp['최고목표']:.3f})' 대비 <b>{gap}</b>의 추가 상향을 통해 기관의 성과 창출 의지를 적극 반영하였습니다.<br>
-        3. 중장기 전망(CAGR {cagr_f:.3f}%) 분석 결과, 본 목표는 향후 성장 궤도를 선도할 수 있는 전략적 임계점에 위치하고 있습니다.
+        2. 대안 모델인 '{비교방법}({comp['최고목표']:.3f})' 대비 <b>{gap}</b>의 추가 상향을 통해 성과 창출 의지를 적극 반영하였습니다.
     </div>
 </div>
 """, unsafe_allow_html=True)
