@@ -27,25 +27,28 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. 디자인 설정 (인덱스 열 숨기기 포함)
+# 2. 디자인 설정 (글씨 크기 15px로 확대 및 인덱스 제거)
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
-    /* 표 전체 스타일 */
-    table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse; }
-    th { background-color: #4A5568 !important; color: white !important; font-size: 13px !important; font-weight: bold !important; text-align: center !important; border: 1px solid #dee2e6 !important; height: 50px; }
-    td { font-size: 13px !important; text-align: center !important; border: 1px solid #dee2e6 !important; background-color: white !important; height: 40px; }
+    /* 전체 글꼴 크기 상향 */
+    html, body, [class*="st-"] { font-size: 15px !important; }
     
-    /* 인덱스 열(가장 왼쪽 열)을 숨기는 설정 */
+    /* 표 스타일 설정 */
+    table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse; }
+    th { background-color: #4A5568 !important; color: white !important; font-size: 15px !important; font-weight: bold !important; text-align: center !important; border: 1px solid #dee2e6 !important; height: 55px; }
+    td { font-size: 15px !important; text-align: center !important; border: 1px solid #dee2e6 !important; background-color: white !important; height: 45px; }
+    
+    /* 인덱스 열(가장 왼쪽 열) 삭제 */
     thead tr th:first-child { display: none; }
     tbody tr th { display: none; }
 
-    div[data-testid="stNumberInput"] input { font-size: 14px !important; text-align: center !important; height: 42px !important; }
-    .header-box { color: white; padding: 10px; text-align: center; font-weight: bold; font-size: 14px !important; border: 1px solid #dee2e6; min-height: 50px; display: flex; align-items: center; justify-content: center; }
+    /* 입력창 및 기타 요소 */
+    div[data-testid="stNumberInput"] input { font-size: 15px !important; text-align: center !important; height: 45px !important; }
+    .header-box { color: white; padding: 10px; text-align: center; font-weight: bold; font-size: 15px !important; border: 1px solid #dee2e6; min-height: 55px; display: flex; align-items: center; justify-content: center; }
     .highlight-input input { background-color: #FFFBEB !important; font-weight: bold !important; color: #D69E2E !important; }
-    .auto-calc { background-color: #F7FAFC !important; color: #4A5568 !important; border: 1px solid #E2E8F0; border-radius: 4px; padding: 10px; text-align: center; font-size: 14px; font-weight: bold; height: 42px; display: flex; align-items: center; justify-content: center; }
-    .footer-note { font-size: 12px; color: #718096; margin-top: 10px; line-height: 1.5; padding: 15px; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; }
-    .logic-box { background-color: #F8FAFC; padding: 20px; border: 1px solid #E2E8F0; border-radius: 10px; margin-top: 30px; border-left: 5px solid #2D3748; }
+    .auto-calc { background-color: #F7FAFC !important; color: #4A5568 !important; border: 1px solid #E2E8F0; border-radius: 4px; padding: 10px; text-align: center; font-size: 15px; font-weight: bold; height: 45px; display: flex; align-items: center; justify-content: center; }
+    .footer-note { font-size: 14px; color: #4A5568; margin-top: 15px; line-height: 1.6; padding: 20px; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -62,17 +65,17 @@ cols1 = st.columns(5)
 for i in range(5):
     with cols1[i]:
         st.markdown(f'<div class="header-box" style="background-color:#2D6A4F;">{2021+i}년 실적</div>', unsafe_allow_html=True)
-        val = st.number_input(f"v_{2021+i}", value=100.0 + (i*5), format="%.3f", label_visibility="collapsed")
+        val = st.number_input(f"v_{2021+i}", value=100.0 + (i*5), format="%.3f", key=f"v_{2021+i}", label_visibility="collapsed")
         실적_리스트.append(val)
 
 cols2 = st.columns(4)
 with cols2[0]:
     st.markdown('<div class="header-box" style="background-color:#D69E2E;">2026년 예상 실적</div>', unsafe_allow_html=True)
     st.markdown('<div class="highlight-input">', unsafe_allow_html=True)
-    예상_2026 = st.number_input("v_2026", value=실적_리스트[-1] * 1.05, format="%.3f", label_visibility="collapsed")
+    예상_2026 = st.number_input("v_2026", value=실적_리스트[-1] * 1.05, format="%.3f", key="v_2026", label_visibility="collapsed")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 2021~2026 기반 추세 분석 (2027~2029 예측)
+# 2021~2026 기반 추세 분석
 X_base = np.arange(6)
 Y_base = np.array(실적_리스트 + [예상_2026])
 slope, intercept = np.polyfit(X_base, Y_base, 1)
@@ -94,7 +97,6 @@ for i, year in enumerate([2027, 2028, 2029]):
 기준치 = float(max(평균_3년, 직전_실적) if 지표방향=="상향" else min(평균_3년, 직전_실적))
 중장기_CAGR = ((전체_실적[-1] / 전체_실적[0])**(1/8) - 1) * 100 if 전체_실적[0] != 0 else 0
 
-# 기초 통계 표 (인덱스 제거 스타일 적용)
 stats_df = pd.DataFrame({
     "과거 3개년 평균": [평균_3년], "과거 3개년 표준편차": [표준편차_3년], 
     "직전년도 실적": [직전_실적], "중장기 연평균 증가율 예상치(%)": [중장기_CAGR]
@@ -119,6 +121,7 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         최저 = 기준치 * 0.8 if 지표방향=="상향" else 기준치 * 1.2
         평점 = max(20.0, min(100.0, 20 + 80 * ((예상_2026 - 최저) / (최고 - 최저))))
         
+        # 도전성 단계 판정
         zp = (최고 - 추세예상치_2026) / 오차 if 지표방향=="상향" else (추세예상치_2026 - 최고) / 오차
         도전성_지수 = (zp / 2.0) * 100
         if 도전성_지수 >= 150: 단계 = "🏆 한계 혁신"
@@ -126,6 +129,7 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         elif 도전성_지수 >= 40: 단계 = "📈 소극 개선"
         else: 단계 = "⚖️ 현상 유지"
         
+        # 한계점 판정
         diff = abs(최고 - 기준치)
         판정 = "⚠️ 한계" if (diff > (3 * 표준편차_3년) or abs(최고/기준치 - 1) > 0.3) else "✅ 유지"
             
@@ -135,7 +139,6 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
             "도전성 단계": 단계, "추세치 분석결과": 판정
         })
 
-    # 결과 표 (왼쪽 인덱스 열 숨김)
     st.subheader("2. 평가방법별 비교 분석 결과 및 임계점 진단")
     df_res = pd.DataFrame(결과_데이터)
     display_cols = ["평가방법", "지표성격", "기준치", "최저목표", "최고목표", "예상평점", "가중치", "예상득점", "도전성 단계", "추세치 분석결과"]
@@ -144,11 +147,17 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         "예상평점": "{:.2f}", "가중치": "{:.3f}", "예상득점": "{:.3f}"
     }))
     
+    # [요청 반영] 4단계별 설명이 추가된 가이드
     st.markdown("""
     <div class="footer-note">
-        <b>※ 분석 지표 가이드</b><br>
-        1. <b>도전성 단계:</b> 과거 추세선 대비 목표치가 얼마나 상향되었는지를 통계적으로 산출한 등급입니다.<br>
-        2. <b>추세치 분석결과(한계):</b> 목표치가 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.
+        <b>💡 분석 지표 상세 가이드</b><br><br>
+        <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
+        &nbsp;&nbsp;• <b>🏆 한계 혁신:</b> 과거의 흐름을 완전히 벗어난 파격적 목표로, 조직 역량의 대전환이 필요한 수준입니다.<br>
+        &nbsp;&nbsp;• <b>🔥 적극 상향:</b> 과거 성장세를 상회하는 공격적 목표로, 성과 창출을 위한 적극적 노력이 수반됩니다.<br>
+        &nbsp;&nbsp;• <b>📈 소극 개선:</b> 과거의 완만한 우상향 추세를 따르는 수준으로, 통상적인 노력으로 달성 가능합니다.<br>
+        &nbsp;&nbsp;• <b>⚖️ 현상 유지:</b> 과거 실적 평균 수준의 목표로, 도전성보다는 안정적 관리에 치중한 상태입니다.<br><br>
+        <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
+        &nbsp;&nbsp;• <b>⚠️ 한계:</b> 목표치가 표준편차의 3배를 초과하거나 기준치 대비 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.
     </div>
     """, unsafe_allow_html=True)
 
@@ -168,11 +177,3 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
     ax.legend(prop=font_prop, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False)
     plt.subplots_adjust(right=0.75)
     st.pyplot(fig)
-
-    # 최종 논리 근거
-    st.markdown('<div class="logic-box">', unsafe_allow_html=True)
-    st.subheader("💡 성과관리 전략 제언")
-    best = df_res.loc[df_res['예상득점'].idxmax()]
-    st.write(f"본 지표는 2029년까지의 중장기 추세와 조직의 임계점을 종합 고려하여 **{best['평가방법']}**을 최적 안으로 제안합니다.")
-    st.write(f"설정된 목표의 도전성은 **'{best['도전성 단계']}'**이며, 추세 분석 결과 **'{best['추세치 분석결과']}'** 상태로 관리 가능한 범위 내에서 최대의 성과를 지향하고 있습니다.")
-    st.markdown('</div>', unsafe_allow_html=True)
