@@ -58,7 +58,6 @@ hist_raw = []
 for i, year in enumerate(past_years):
     with data_cols[i]:
         st.markdown(f'<div class="sub-label-text">{year}년</div>', unsafe_allow_html=True)
-        # 초기값 예시: 100, 105, 110...
         val = st.number_input(f"{year}실적", label_visibility="collapsed", value=100.000 + (i*5), format="%.3f", key=f"h_{i}")
         hist_raw.append(val)
 
@@ -85,19 +84,17 @@ with data_cols[8]:
 st.markdown("---")
 if st.button("🚀 모든 평가방법 통합 분석 실행"):
     
-    # [도전성 지수 zp 계산을 위한 회귀분석 기반 준비]
+    # [도전성 지수 zp 계산 준비]
     X = np.array([1, 2, 3, 4, 5])
     Y = np.array(hist_raw)
     slope, intercept = np.polyfit(X, Y, 1)
     trend_2026 = slope * 6 + intercept
     
-    # 보정 로직: 과거 변동성(S)이 너무 작아 지수가 뻥튀기되는 것을 방지
+    # 보정 로직: 과거 변동성(S)이 너무 작을 경우 기준치의 10%를 하한으로 설정
     s_resid = np.sqrt(np.sum((Y - (intercept + slope * X))**2) / 3)
-    # 기준치의 10%를 최소 변동폭 임계값으로 설정하여 분모가 0에 가깝게 되는 것 방지
     min_S = abs(base_val * 0.10)
     S_val = max(s_resid * np.sqrt(1 + (1/5) + (9/10)), min_S)
 
-    # 평가방법별 최고/최저 목표 산출 로직
     is_up = (direction == "상향")
     if is_up:
         methods_data = [
@@ -106,7 +103,7 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
             ("목표부여(120%)", base_val * 1.200, base_val * 0.800),
             ("목표부여(110%)", base_val * 1.100, base_val * 0.800)
         ]
-    else: # 하향 지표
+    else:
         methods_data = [
             ("목표부여(2편차)", base_val - 2*std_val, base_val + 2*std_val),
             ("목표부여(1편차)", base_val - 1*std_val, base_val + 2*std_val),
@@ -116,7 +113,6 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
 
     results = []
     for m_name, hi, lo in methods_data:
-        # 평점 산식: 20 + 80 * {(실적-최저)/(최고-최저)}
         if hi == lo:
             score = 60.000
         else:
@@ -125,11 +121,10 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
         score = max(20.0, min(100.0, score))
         weighted_score = (score / 100) * weight
         
-        # 도전성 지수(zp) 계산 및 단계 판정 (보정된 S_val 사용)
+        # 도전성 지수 계산 및 판정
         zp = (hi - trend_2026) / S_val if is_up else (trend_2026 - hi) / S_val
         challenge_score = (zp / 2.0) * 100
 
-        # 판정 임계값 강화 (110% 등이 '한계 혁신'으로 나오지 않도록 조정)
         if challenge_score >= 150: status = "🏆 한계 혁신"
         elif challenge_score >= 80: status = "🔥 적극 상향"
         elif challenge_score >= 40: status = "📈 소극 개선"
@@ -137,15 +132,9 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
         else: status = "⚠️ 하향 설정"
 
         results.append({
-            "평가방법": m_name,
-            "지표성격": direction,
-            "기준치": round(base_val, 3),
-            "최고목표": round(hi, 3),
-            "최저목표": round(lo, 3),
-            "예상실적": round(est, 3),
-            "예상평점": round(score, 3),
-            "가중치": round(weight, 3),
-            "예상득점": round(weighted_score, 3),
+            "평가방법": m_name, "지표성격": direction, "기준치": round(base_val, 3),
+            "최고목표": round(hi, 3), "최저목표": round(lo, 3), "예상실적": round(est, 3),
+            "예상평점": round(score, 3), "가중치": round(weight, 3), "예상득점": round(weighted_score, 3),
             "도전성 단계": status
         })
     
@@ -160,7 +149,7 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
         use_container_width=True
     )
 
-    # 개선된 각주 디자인
+    # 🚩 도전성 5단계 판정 기준 각주
     st.markdown("""
     <div style='background-color: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 5px solid #d1d5db; margin-top: 10px;'>
         <b style='font-size: 0.95em; color: #333;'>🚩 도전성 5단계 판정 기준 (통계 보정 반영)</b><br>
@@ -171,6 +160,18 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
             • <span style='color: #0275d8;'><b>4단계 (🔥 적극 상향)</b></span> : 도전성 지수 80% 이상 (도전적인 상향 목표)<br>
             • <span style='color: #5cb85c;'><b>5단계 (🏆 한계 혁신)</b></span> : 도전성 지수 150% 이상 (과거 추세를 완전히 탈피한 목표)
         </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 🔍 도전성 지수 산출방법 설명 박스
+    st.markdown("""
+    <div style='background-color: #ffffff; padding: 12px; border: 1px solid #e6e9ef; border-radius: 5px; margin-top: 10px;'>
+        <p style='font-size: 0.85em; font-weight: bold; color: #444; margin-bottom: 5px;'>🔍 도전성 지수($zp$) 산출방법</p>
+        <p style='font-size: 0.8em; color: #666; line-height: 1.5;'>
+            도전성 지수는 과거 5개년 실적의 회귀직선을 통해 예측된 <b>2026년 추세치($Trend$)</b>를 기준으로, 설정된 <b>최고목표($Target$)</b>가 통계적 오차범위 내에서 얼마나 멀리 떨어져 있는지를 측정합니다.<br><br>
+            $$zp = \\frac{Target - Trend}{S_{val}}$$ <br>
+            (단, $S_{val}$은 추정의 표준오차이며, 변동성이 극도로 적은 경우 기준치의 10%를 하한으로 보정하여 지수의 과다산출을 방지합니다.)
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -190,6 +191,6 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
     st.info("""
     **💡 주요 산식 가이드**
     * **예상평점**: $20 + 80 \\times (예상실적 - 최저목표) / (최고목표 - 최저목표)$
-    * **도전성 지수(zp)**: 최고목표와 과거 추세치의 편차를 표준오차로 나눈 값입니다. (과거 변동성이 작을 경우 기준치 10%로 보정)
-    * **특이사항**: 상향 시 최고목표가 높을수록, 하향 시 최고목표가 낮을수록 높은 도전성 단계가 부여됩니다.
+    * **예상득점**: $(예상평점 / 100) \\times 가중치$
+    * **특이사항**: 상향 지표는 목표가 높을수록, 하향 지표는 목표가 낮을수록 높은 도전성 단계가 부여됩니다.
     """)
