@@ -12,9 +12,10 @@ st.set_page_config(page_title="경영평가 지표 시뮬레이터", layout="wid
 
 st.title("⚖️ 경영평가 계량지표 통합 시뮬레이터")
 
-# 시각적 개선을 위한 스타일 설정
+# 시각적 개선을 위한 스타일 설정 (표의 가운데 정렬 및 제목 강조 CSS 추가)
 st.markdown("""
 <style>
+    /* 입력 필드 스타일 */
     input:disabled {
         -webkit-text-fill-color: #000000 !important;
         color: #000000 !important;
@@ -24,6 +25,8 @@ st.markdown("""
         opacity: 1 !important;
     }
     .stNumberInput input { background-color: #ffffff !important; color: #000000 !important; }
+    
+    /* 헤더 박스 스타일 */
     .main-header-box {
         background-color: #f0f2f6; padding: 10px; border-radius: 5px;
         text-align: center; font-weight: 800; font-size: 1.1em;
@@ -33,6 +36,17 @@ st.markdown("""
     .sub-label-text {
         text-align: center; font-size: 1.0em; font-weight: 700; color: #111;
         margin-bottom: 8px; height: 25px; display: flex; align-items: center; justify-content: center;
+    }
+
+    /* 표(DataFrame) 스타일 강제 조정 */
+    .stDataFrame div[data-testid="stTable"] th {
+        background-color: #4A5568 !important;
+        color: white !important;
+        text-align: center !important;
+        font-weight: bold !important;
+    }
+    .stDataFrame div[data-testid="stTable"] td {
+        text-align: center !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -85,13 +99,11 @@ with 입력_열[8]:
 st.markdown("---")
 if st.button("🚀 모든 평가방법 통합 분석 실행"):
     
-    # [도전성 지수 계산을 위한 통계 준비]
+    # [통계 준비]
     X_축 = np.array([1, 2, 3, 4, 5])
     Y_축 = np.array(실적_리스트)
     기울기, 절편 = np.polyfit(X_축, Y_축, 1)
     미래_추세치 = 기울기 * 6 + 절편
-    
-    # 보정 로직
     잔차_표준편차 = np.sqrt(np.sum((Y_축 - (절편 + 기울기 * X_축))**2) / 3)
     최소_변동폭 = abs(기준치 * 0.10)
     보정_표준오차 = max(잔차_표준편차 * np.sqrt(1 + (1/5) + (9/10)), 최소_변동폭)
@@ -114,15 +126,9 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
 
     결과_데이터 = []
     for 명칭, 최고, 최저 in 방법별_데이터:
-        if 최고 == 최저:
-            평점 = 60.000
-        else:
-            평점 = 20 + 80 * ((예상실적 - 최저) / (최고 - 최저))
-        
+        평점 = 60.000 if 최고 == 최저 else 20 + 80 * ((예상실적 - 최저) / (최고 - 최저))
         평점 = max(20.0, min(100.0, 평점))
         예상득점 = (평점 / 100) * 가중치
-        
-        # 도전성 지수 계산
         지수 = (최고 - 미래_추세치) / 보정_표준오차 if 상향_여부 else (미래_추세치 - 최고) / 보정_표준오차
         도전성_백분율 = (지수 / 2.0) * 100
 
@@ -135,31 +141,46 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
         결과_데이터.append({
             "평가방법": 명칭, 
             "지표성격": 지표방향, 
-            "3개년 평균": round(삼개년_평균, 3),
-            "직전년도 실적": round(직전년도_실적, 3),
-            "기준치": round(기준치, 3),
-            "최고목표": round(최고, 3), 
-            "최저목표": round(최저, 3), 
-            "예상실적": round(예상실적, 3),
-            "예상평점": round(평점, 3), 
-            "가중치": round(가중치, 3), 
-            "예상득점": round(예상득점, 3),
+            "3개년 평균": 삼개년_평균,
+            "직전년도 실적": 직전년도_실적,
+            "기준치": 기준치,
+            "최고목표": 최고, 
+            "최저목표": 최저, 
+            "예상실적": 예상실적,
+            "예상평점": 평점, 
+            "가중치": 가중치, 
+            "예상득점": 예상득점,
             "도전성 단계": 단계
         })
     
     표_데이터 = pd.DataFrame(결과_데이터)
-    st.subheader("2. 평가방법별 비교 분석 결과")
     
-    st.dataframe(
-        표_데이터.style.format({
+    # [스타일 적용 함수] 모든 셀 가운데 정렬 및 첫 열/첫 행 강조
+    def 스타일_함수(styler):
+        # 1. 모든 열 가운데 정렬
+        styler.set_properties(**{'text-align': 'center'})
+        # 2. 수치 형식 지정
+        styler.format({
             "3개년 평균": "{:.3f}", "직전년도 실적": "{:.3f}", "기준치": "{:.3f}", 
             "최고목표": "{:.3f}", "최저목표": "{:.3f}", "예상실적": "{:.3f}", 
             "예상평점": "{:.3f}", "가중치": "{:.3f}", "예상득점": "{:.3f}"
-        }).highlight_max(axis=0, subset=['예상평점'], color='#D4EDDA'), 
-        use_container_width=True
-    )
+        })
+        # 3. 첫 번째 열(평가방법) 배경색 강조 및 글자 두껍게
+        styler.set_properties(subset=["평가방법"], **{
+            'background-color': '#F7FAFC',
+            'font-weight': 'bold',
+            'border-right': '2px solid #CBD5E0'
+        })
+        # 4. 예상평점 최대값 하이라이트
+        styler.highlight_max(axis=0, subset=['예상평점'], color='#D4EDDA')
+        return styler
 
-    # 도전성 기준 및 산출방법 설명 (이전과 동일)
+    st.subheader("2. 평가방법별 비교 분석 결과")
+    
+    # 스타일 적용하여 표 출력
+    st.table(스타일_함수(표_데이터.style))
+
+    # [도전성 기준 및 산출방법 설명 박스]
     st.markdown("""
     <div style='background-color: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 5px solid #d1d5db; margin-top: 10px;'>
         <b style='font-size: 0.95em; color: #333;'>🚩 도전성 5단계 판정 기준</b><br>
@@ -177,10 +198,10 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
     <div style='background-color: #ffffff; padding: 12px; border: 1px solid #e6e9ef; border-radius: 5px; margin-top: 10px;'>
         <p style='font-size: 0.85em; font-weight: bold; color: #444; margin-bottom: 5px;'>🔍 도전성 지수 산출방법</p>
         <p style='font-size: 0.8em; color: #666; line-height: 1.6;'>
-            도전성 지수는 과거 5개년 실적의 <b>미래 추세 예측값</b>을 기준으로, 이번에 설정한 <b>최고목표</b>가 얼마나 멀리 떨어져 있는지를 측정합니다.<br><br>
+            도전성 지수는 과거 5개년 실적의 <b>미래 추세 예측값</b>을 기준으로, 설정된 <b>최고목표</b>가 얼마나 멀리 떨어져 있는지를 측정합니다.<br><br>
             <b>[계산식]</b><br>
             도전성 지수 = (최고목표 - 미래 추세치) ÷ 표준오차<br><br>
-            ※ 과거 실적 변동이 너무 적은 경우, 기준치의 10%를 최소 변동폭으로 적용하여 지수가 과도하게 높게 나오는 것을 방지했습니다.
+            ※ 과거 실적 변동이 너무 적은 경우, 기준치의 10%를 최소 변동폭으로 적용하여 지수의 과도하게 높게 나오는 것을 방지했습니다.
         </p>
     </div>
     """, unsafe_allow_html=True)
