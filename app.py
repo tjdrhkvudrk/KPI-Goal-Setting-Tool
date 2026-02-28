@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (원본 유지 + 사이드바 제목 스타일 강화)
+# 2. CSS 디자인 (원본 유지 + 사이드바 제목 가시성 강화)
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -47,10 +47,10 @@ st.markdown("""
         display: block;
     }
     
-    div[data-testid="stNumberInput"] label { display: none !important; }
-    /* 사이드바 내 입력칸 레이블만 숨김 (직접 만든 제목을 사용하기 위함) */
-    .sidebar div[data-testid="stTextInput"] label, 
-    .sidebar div[data-testid="stRadio"] label { 
+    /* 레이블 숨기기 로직 (모든 레이블 제거) */
+    div[data-testid="stNumberInput"] label,
+    div[data-testid="stTextInput"] label,
+    div[data-testid="stRadio"] label { 
         display: none !important; 
     }
     
@@ -63,22 +63,22 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 사이드바 개선 (제목 강조 및 배치 조정)
+# 3. 사이드바 개선 (불필요한 레이블 제거 및 입력값 초기화)
 with st.sidebar:
-    st.markdown("### ⚙️ 지표 설정")
-    st.markdown("---")
-    
     st.markdown('<p class="sb-title">📌 지표명</p>', unsafe_allow_html=True)
-    지표명 = st.text_input("지표명_입력", value="주요 성과지표(KPI)")
+    # 초기값을 "지표명 입력"으로 설정하여 사용자가 수정하게 함
+    지표명 = st.text_input("label_1", value="지표명 입력")
     
     st.markdown('<p class="sb-title">🎯 지표 성격</p>', unsafe_allow_html=True)
-    지표방향 = st.radio("지표방향_선택", ["상향", "하향"], horizontal=True)
+    지표방향 = st.radio("label_2", ["상향", "하향"], horizontal=True)
     
     st.markdown('<p class="sb-title">⚖️ 가중치</p>', unsafe_allow_html=True)
-    가중치_값 = st.number_input("가중치_입력", value=5.000, step=0.001, format="%.3f")
+    가중치_값 = st.number_input("label_3", value=5.000, step=0.001, format="%.3f")
     
     st.markdown("---")
-    st.info(f"설정 지표: **{지표명}**")
+    # 지표명을 입력하지 않았을 때의 기본 처리
+    display_name = 지표명 if 지표명 and 지표명 != "지표명 입력" else "미설정 지표"
+    st.info(f"현재 분석 지표: **{display_name}**")
 
 st.title("⚖️ 중장기 성과지표 목표설정 및 한계점 분석기")
 
@@ -156,7 +156,9 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
             "도전성 단계": 단계, "추세치 분석결과": 판정
         })
 
-    st.subheader(f"2. {지표명} - 평가방법별 비교 분석 결과 및 임계점 진단")
+    # 타이틀에서 "지표명 입력"이라는 기본값이 보이지 않도록 처리
+    final_title = display_name if display_name != "미설정 지표" else "지표"
+    st.subheader(f"2. {final_title} - 평가방법별 비교 분석 결과 및 임계점 진단")
     df_res = pd.DataFrame(결과_데이터)
     st.table(df_res.style.format({col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]}))
 
