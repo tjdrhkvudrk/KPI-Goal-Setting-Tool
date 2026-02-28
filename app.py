@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 # 페이지 설정
 st.set_page_config(page_title="경영평가 지표 시뮬레이터", layout="wide")
 
-# 현재 연도 기준 설정 (2026년)
+# 현재 연도 기준 설정
 current_year = 2026 
 past_years = [current_year - i for i in range(5, 0, -1)]
 
@@ -84,8 +84,17 @@ with data_cols[8]:
 st.markdown("---")
 if st.button("🚀 모든 평가방법 통합 분석 실행"):
     
+    # [도전성 지수 zp 계산을 위한 회귀분석 기반 준비]
+    X = np.array([1, 2, 3, 4, 5])
+    Y = np.array(hist_raw)
+    slope, intercept = np.polyfit(X, Y, 1)
+    trend_2026 = slope * 6 + intercept
+    s_resid = np.sqrt(np.sum((Y - (intercept + slope * X))**2) / 3)
+    S_val = max(s_resid * np.sqrt(1 + (1/5) + (9/10)), 0.0001)
+
     # 평가방법별 최고/최저 목표 산출 로직
-    if direction == "상향":
+    is_up = (direction == "상향")
+    if is_up:
         methods_data = [
             ("목표부여(2편차)", base_val + 2*std_val, base_val - 2*std_val),
             ("목표부여(1편차)", base_val + 1*std_val, base_val - 2*std_val),
@@ -102,7 +111,7 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
 
     results = []
     for m_name, hi, lo in methods_data:
-        # 평점 산식: 20 + 80 * {(실적-최저)/(최고-최저)}
+        # 평점 산식
         if hi == lo:
             score = 60.000
         else:
@@ -111,7 +120,16 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
         score = max(20.0, min(100.0, score))
         weighted_score = (score / 100) * weight
         
-        # 요청하신 순서대로 결과 데이터 구성
+        # [도전성 5단계 판정 로직]
+        zp = (hi - trend_2026) / S_val if is_up else (trend_2026 - hi) / S_val
+        challenge_score = (zp / 2.0) * 100
+
+        if challenge_score >= 100: status = "🏆 한계 혁신"
+        elif challenge_score >= 50: status = "🔥 적극 상향"
+        elif challenge_score >= 25: status = "📈 소극 개선"
+        elif challenge_score >= 0: status = "⚖️ 현상 유지"
+        else: status = "⚠️ 하향 설정"
+
         results.append({
             "평가방법": m_name,
             "지표성격": direction,
@@ -121,13 +139,13 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
             "예상실적": round(est, 3),
             "예상평점": round(score, 3),
             "가중치": round(weight, 3),
-            "예상득점": round(weighted_score, 3)
+            "예상득점": round(weighted_score, 3),
+            "도전성 단계": status
         })
     
     df = pd.DataFrame(results)
     st.subheader("2. 평가방법별 비교 분석 결과")
     
-    # 데이터프레임 스타일 적용 및 출력
     st.dataframe(
         df.style.format({
             "기준치": "{:.3f}", "최고목표": "{:.3f}", "최저목표": "{:.3f}", 
@@ -135,6 +153,14 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
         }).highlight_max(axis=0, subset=['예상평점'], color='#D4EDDA'), 
         use_container_width=True
     )
+
+    # 도전성 5단계 각주
+    st.markdown("""
+    <div style='font-size: 0.85em; color: #555; line-height: 1.6;'>
+    * <b>도전성 5단계 기준 안내 (도전성 지수 기반)</b><br>
+    &nbsp;&nbsp; 1단계(⚠️ 하향 설정): 도전성 지수 0% 미만 | 2단계(⚖️ 현상 유지): 0% 이상 | 3단계(📈 소극 개선): 25% 이상 | 4단계(🔥 적극 상향): 50% 이상 | 5단계(🏆 한계 혁신): 100% 이상
+    </div>
+    """, unsafe_allow_html=True)
 
     # 그래프 시각화
     fig, ax = plt.subplots(figsize=(10, 4))
@@ -152,9 +178,6 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
     st.info("""
     **💡 주요 산식 가이드**
     * **예상평점**: $20 + 80 \\times (예상실적 - 최저목표) / (최고목표 - 최저목표)$
-        - 산출된 평점은 최저 20점에서 최대 100점 사이로 제한됩니다.
-    * **예상득점**: $(예상평점 / 100) \\times 가중치$
-    * **특이사항**: 
-        - **1편차 방법**: 최고목표는 1편차, 최저목표는 2편차를 적용합니다.
-        - **120%/110% 방법**: 상향 시 최저는 80%, 하향 시 최저는 120%로 고정 적용합니다.
+    * **도전성 단계**: 최고목표와 과거 추세치($trend$)의 편차를 표준오차($S$)로 나눈 도전성 지수($zp$)를 기준으로 판정합니다.
+    * **특이사항**: 상향 시 최고목표가 높을수록, 하향 시 최고목표가 낮을수록 높은 도전성 단계가 부여됩니다.
     """)
