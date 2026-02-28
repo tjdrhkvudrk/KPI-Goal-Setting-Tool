@@ -6,7 +6,7 @@ import matplotlib.font_manager as fm
 import os
 import requests
 
-# 1. 한글 폰트 설정
+# 1. 한글 폰트 설정 (고정)
 @st.cache_resource
 def load_korean_font():
     font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
@@ -21,10 +21,9 @@ def load_korean_font():
         font_name = fm.FontProperties(fname=font_path).get_name()
         plt.rc('font', family=font_name)
     plt.rc('axes', unicode_minus=False)
-    return font_path
+    return font_name if os.path.exists(font_path) else None
 
-font_file = load_korean_font()
-font_prop = fm.FontProperties(fname=font_file) if font_file else None
+font_name = load_korean_font()
 
 # 2. CSS 디자인 (가이드 가독성 극대화)
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
@@ -40,9 +39,9 @@ st.markdown("""
     div[data-testid="stNumberInput"] label, div[data-testid="stTextInput"] label, div[data-testid="stRadio"] > label { display: none !important; }
     .auto-res { background-color: #F8FAFC; border: 1px solid #dee2e6; height: 42px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
     .guide-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-top: 15px; line-height: 1.8; }
-    .recom-box { background-color: #F0F4F8; border: 1px solid #2B6CB0; border-radius: 10px; padding: 20px; margin-top: 15px; border-left: 8px solid #2B6CB0; }
-    .logic-box { background-color: #FFFFFF; border: 1px solid #CBD5E0; border-radius: 8px; padding: 15px; margin-top: 10px; }
-    .guide-title { font-weight: bold; color: #2D3748; font-size: 16px; margin-bottom: 10px; display: block; }
+    .recom-box { background-color: #FFF5F5; border: 1px solid #E53E3E; border-radius: 10px; padding: 20px; margin-top: 15px; border-left: 8px solid #E53E3E; }
+    .logic-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 15px; margin-top: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
+    .guide-title { font-weight: bold; color: #2D3748; font-size: 17px; margin-bottom: 10px; display: block; }
     .point-txt { color: #C53030; font-weight: bold; }
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
     td { text-align: center !important; }
@@ -97,20 +96,12 @@ with m_cols[2]:
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
-avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
-
-st.markdown(f"""
-<div class="guide-box">
-    <span class="guide-title">📑 기초 통계 분석 데이터 (공부용)</span>
-    • <b>시계열 분석 기법:</b> 입력하신 데이터는 <b>'선형 회귀 분석(Linear Regression)'</b>을 통해 중장기 추세선을 도출했습니다.<br>
-    • <b>변동성 분석:</b> 과거 3개년 표준편차는 {std3:.3f}입니다. 이 값은 목표 설정 시 '도전성'의 척도가 됩니다.
-</div>
-""", unsafe_allow_html=True)
+st.markdown(f"""<div class="guide-box"><span class="guide-title">📑 기초 통계 데이터 분석 결과</span>• 과거 3개년 평균: {avg3:.3f} / 표준편차(Sigma): {std3:.3f} (도전성 판정의 기준선)</div>""", unsafe_allow_html=True)
 
 st.markdown("---")
 
 if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
-    # 계산 로직
+    # 분석 로직
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     방법별_설정 = [
         ("목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -128,27 +119,16 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         도전성_지수 = round((zp / 2.0) * 100, 3)
         단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지"
         판정 = "⚠️ 한계" if (abs(최고 - 기준치) > (3 * std3) or abs(최고/기준치 - 1) > 0.3) else "✅ 유지"
-        결과_데이터.append({
-            "평가방법": 명칭, "지표성격": 지표방향, "기준치": 기준치, "최저목표": 최저, "최고목표": 최고,
-            "예상실적": 예상_2026, "예상평점": 평점, "가중치": 가중치_값, "예상득점": round(평점 * (가중치_값 / 100.0), 3), 
-            "도전성 단계": 단계, "추세치 분석결과": 판정, "raw_도전성": 도전성_지수
-        })
+        결과_데이터.append({"평가방법": 명칭, "지표성격": 지표방향, "기준치": 기준치, "최저목표": 최저, "최고목표": 최고, "예상실적": 예상_2026, "예상평점": 평점, "가중치": 가중치_값, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "추세치 분석결과": 판정, "raw_도전성": 도전성_지수})
 
-    # --- 2. 분석 결과 테이블 ---
-    st.subheader(f"2. {display_name} - 시나리오별 비교 분석 및 임계점 진단")
+    # 2. 결과 테이블 및 분석 가이드 (기존 완벽한 버전 복구)
+    st.subheader(f"2. {display_name} - 평가방법별 비교 분석 결과 및 임계점 진단")
     df_res = pd.DataFrame(결과_데이터)
     st.table(df_res.drop(columns=['raw_도전성']).style.format({col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]}))
 
-    # --- 💡 가이드 (표 바로 아래) ---
-    st.markdown("""
-    <div class="guide-box">
-        <span class="guide-title">💡 분석 지표 가이드 (평가위원 대응용 지식)</span>
-        <b>1. 도전성 단계 분석</b>: 목표치가 과거 표준편차의 몇 배(Sigma) 수준인지 분석합니다. 3배 이상은 통계적 임계점입니다.<br>
-        <b>2. 추세치 분석결과</b>: 목표가 조직의 기초 체력을 벗어난 '한계치'에 도달했는지 판정하여 리스크를 관리합니다.
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div class="guide-box"><span class="guide-title">💡 분석 지표 상세 가이드 (도전성 판정 기준)</span><b>1. 도전성 단계 분석</b>: 🏆한계 혁신(압도적 도전), 🔥적극 상향(공격적 목표), 📈소극 개선(추세 유지), ⚖️현상 유지(관리 중심)<br><b>2. 추세치 분석결과</b>: ⚠️한계 판정은 과거 변동폭(3-Sigma)을 초과하여 실현 가능성이 매우 낮음을 의미합니다.</div>""", unsafe_allow_html=True)
 
-    # --- 3. 그래프 ---
+    # 3. 그래프 (기존 완벽한 버전 유지)
     st.subheader("3. 2029년 중장기 전망 및 목표 수준 시뮬레이션")
     fig, ax = plt.subplots(figsize=(11, 4))
     연도_축 = [f"'{y-2000}" for y in range(2021, 2030)]
@@ -157,44 +137,49 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
     ax.scatter(연도_축[5], 예상_2026, color='#D69E2E', s=200, marker='D', zorder=10, label='2026 예상')
     for i, row in df_res.iterrows():
         ax.scatter(연도_축[5], row['최고목표'], s=120, edgecolors='black', label=f"{row['평가방법']}")
-    ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1.0, 1.0))
+    ax.legend(prop={'family': font_name} if font_name else None, loc='upper left', bbox_to_anchor=(1.0, 1.0))
     st.pyplot(fig)
 
-    # --- 4. 시나리오 작성 가이드 (최종 완성판) ---
+    # 4. 도전적 목표 설정 시나리오 작성 가이드 (자동 분석 기반 고도화)
     st.subheader("4. 도전적 목표 설정 시나리오 작성 가이드")
     
     유지가능 = [d for d in 결과_데이터 if d['추세치 분석결과'] == "✅ 유지"]
     
     if 유지가능:
         recom = max(유지가능, key=lambda x: x['raw_도전성'])
-        conservative = min(결과_데이터, key=lambda x: x['raw_도전성'])
+        consv = min(결과_데이터, key=lambda x: x['raw_도전성'])
+        limit_val = next((d['최고목표'] for d in 결과_데이터 if d['추세치 분석결과'] == "⚠️ 한계"), "산출 범위 초과")
         
-        # 중장기 전망과의 관계에 따른 자동 문구 생성
-        is_aggressive = (지표방향 == "상향" and recom['최고목표'] >= 미래_전망[-1]) or (지표방향 == "하향" and recom['최고목표'] <= 미래_전망[-1])
-        trend_analysis = f"예측 모델의 기대치({미래_전망[-1]:.3f})를 상회하는 공격적 설정" if is_aggressive else f"미래 불확실성을 고려하여 전망치({미래_전망[-1]:.3f})에 근접하게 수렴시킨 합리적 설정"
-        keyword = "Stretch Goal(도전적 목표)" if is_aggressive else "내실 경영형 목표"
-
+        diff_pct = abs(round((recom['최고목표'] / 예상_2026 - 1) * 100, 2))
+        is_high = (지표방향 == "상향" and recom['최고목표'] >= 미래_전망[-1]) or (지표방향 == "하향" and recom['최고목표'] <= 미래_전망[-1])
+        
         st.markdown(f"""
         <div class="recom-box">
-            <span class="guide-title" style="color:#2B6CB0;">📘 시나리오 기법(Scenario Planning) 기반 보고 가이드</span>
-            본 가이드는 평가위원이 강조한 <b>'시나리오 기법'</b>을 적용하여 3가지 시나리오(보수-중립-도전)를 검토한 결과입니다.
+            <span class="guide-title" style="color:#C53030;">📌 실시간 분석 기반 시나리오 추천 ([{recom['평가방법']}] 채택)</span>
+            분석 결과, <b>{recom['도전성 단계']}</b> 수준의 목표가 가장 적합한 시나리오로 도출되었습니다.
             
-            <div class="logic-box">
-                <b>1. 다중 시나리오 설계 (Multi-Scenario Analysis)</b><br>
-                • <b>[시나리오 A] 보수적 안정안</b>: 과거 평균 수준 유지 ({conservative['최고목표']:.3f})<br>
-                • <b>[시나리오 B] 적극적 상향안 (추천)</b>: 추세 범위 내 최상단 도전 ({recom['최고목표']:.3f})<br>
-                • <b>[시나리오 C] 한계 돌파형</b>: 통계적 임계점 초과 구간 (리스크 검토 대상)
+            <div class="logic-card">
+                <b>가이드 1. 시나리오 기법 기반 비교 분석 (Scenario Planning)</b><br>
+                평가위원 권고에 따라 3대 시나리오를 시뮬레이션한 결과입니다.<br>
+                • <b>[보수적 시나리오]</b> 실적 유지 중심의 안정적 목표 ({consv['최고목표']:.3f})<br>
+                • <b>[도전적 시나리오]</b> 역량 집중을 통한 성과 상향 목표 ({recom['최고목표']:.3f}) <span class="point-txt">← 최종 채택안</span><br>
+                • <b>[임계 시나리오]</b> 통계적 달성 불확실성 구간 ({limit_val})
             </div>
 
-            <div class="logic-box">
-                <b>2. 보고서용 논리적 근거 (상황에 맞춰 인용)</b><br>
-                ① <b>방법론 명시:</b> "과거 5개년 실적의 성향을 반영한 <b>선형 회귀 시계열 모델</b>과 시나리오 기법을 병행하여 목표를 산출함"<br>
-                ② <b>타당성 강조:</b> "제안된 목표({recom['최고목표']:.3f})는 {trend_analysis}을 통해 설정의 객관성과 정당성을 확보함"<br>
-                ③ <b>리스크 관리:</b> "통계적 임계점(3-Sigma) 분석을 통해 무리한 설정을 지양하고, <b>도전성과 실현 가능성의 균형점</b>을 도출함"<br>
-                ④ <b>결론:</b> "단순 개선을 넘어선 <b>{keyword}</b> 설정을 통해 조직의 역량을 결집하고 미래 성장을 견인하고자 함"
+            <div class="logic-card">
+                <b>가이드 2. 통계적 도전성 입증 근거 (Statistical Justification)</b><br>
+                • <b>Sigma 분석</b>: 제안 목표는 과거 변동폭({std3:.3f})의 <b>{round(abs(recom['최고목표']-기준치)/std3, 2)}배</b> 수준으로, 통계적 유의미성 내에서 가장 공격적인 수치입니다.<br>
+                • <b>정당성 확보</b>: 단순 상향이 아닌, 과거 5개년 실적의 표준편차를 기반으로 <b>'근거 있는 도전성'</b>을 확보하였습니다.
             </div>
-            
-            <p style="font-size: 13px; color: #718096; margin-top: 10px;">
-            ※ 담당자 메모: 위 문구 중 본인의 지표 성향(도전/안정)에 가장 잘 맞는 문장을 선택하여 보고서에 활용하십시오.</p>
+
+            <div class="logic-card">
+                <b>가이드 3. 미래 추세 대응 전략 (Trend-driven Logic)</b><br>
+                • <b>예측 모델 연계</b>: 선형 회귀 분석 결과 도출된 중장기 전망치({미래_전망[-1]:.3f})를 고려할 때, 본 목표는 <b>{"성장을 가속화하는" if is_high else "내실을 다지며 성장을 견인하는"}</b> 전략적 포지션을 취하고 있습니다.
+            </div>
+
+            <div class="logic-card">
+                <b>[보고서 인용 문구 초안]</b><br>
+                "본 목표는 시나리오 기법을 적용하여 다각적 시뮬레이션을 거쳤으며, 과거 변동성(Standard Deviation) 대비 도전적인 수준인 <b>{recom['최고목표']:.3f}</b>(전년 실적 대비 {diff_pct}% 상향)를 최종안으로 도출함. 이는 통계적 임계점 이내의 최상단 목표로서 <b>도전성과 실현 가능성의 최적 균형</b>을 구현한 결과임."
+            </div>
         </div>
         """, unsafe_allow_html=True)
