@@ -66,11 +66,8 @@ st.markdown("##### [실적 요약 및 기준치 산정]")
 예상실적_입력 = st.number_input("🎯 2026년 최종 예상실적 확정", value=기준치 * 1.05, format="%.3f")
 
 summary_df = pd.DataFrame({
-    "3개년 평균": [삼개년_평균],
-    "직전년도 실적": [직전년도_실적],
-    "5개년 표준편차": [표준편차_값],
-    "당해년도 기준치": [기준치],
-    "2026년 예상실적": [예상실적_입력]
+    "3개년 평균": [삼개년_평균], "직전년도 실적": [직전년도_실적], "5개년 표준편차": [표준편차_값],
+    "당해년도 기준치": [기준치], "2026년 예상실적": [예상실적_입력]
 })
 st.table(summary_df.style.format("{:.3f}"))
 
@@ -111,18 +108,21 @@ if st.button("🚀 통합 성과 분석 실행"):
     num_cols = ["3개년 평균", "직전년 실적", "기준치", "최저목표", "최고목표", "예상평점", "가중치", "예상득점"]
     st.table(df_res.style.format({c: "{:.3f}" for c in num_cols if c not in ["예상평점", "가중치"]}).format({"예상평점": "{:.2f}", "가중치": "{:.2f}"}))
 
-    # [요청사항 반영] 단계별 설명 한 줄 배치 및 여백 강화
+    # [요청 반영] 제목 옆 진하지 않은 설명 추가 및 단계 간 여백 확보
     st.markdown("""
-    <div style="background-color: #f8f9fa; padding: 18px; border-radius: 10px; border: 1px solid #dee2e6; margin-top: 10px;">
-        <p style="margin-bottom: 10px; font-weight: bold; color: #2d3748;">🔍 도전성 단계(zp) 판정 기준</p>
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-            <span style="flex: 1; text-align: center;"><strong>🏆 한계 혁신</strong> : 150% 이상</span>
-            <span style="color: #cbd5e0;"> | </span>
-            <span style="flex: 1; text-align: center; margin-left: 10px;"><strong>🔥 적극 상향</strong> : 80% ~ 150%</span>
-            <span style="color: #cbd5e0;"> | </span>
-            <span style="flex: 1; text-align: center; margin-left: 10px;"><strong>📈 소극 개선</strong> : 40% ~ 80%</span>
-            <span style="color: #cbd5e0;"> | </span>
-            <span style="flex: 1; text-align: center; margin-left: 10px;"><strong>⚖️ 현상 유지</strong> : 0% ~ 40%</span>
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 15px;">
+        <p style="margin-bottom: 15px;">
+            <span style="font-size: 16px; font-weight: bold; color: #2d3748;">🔍 도전성 단계(zp) 판정 기준</span>
+            <span style="font-size: 13px; color: #718096; margin-left: 8px;">: 최고목표가 과거 추세치($Trend$)에서 통계적 오차범위 내 얼마나 멀리 떨어져 있는지 측정합니다.</span>
+        </p>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #4a5568;">
+            <div style="flex: 1; text-align: center;"><strong>🏆 한계 혁신</strong><br><span style="color: #a0aec0; font-size: 12px;">150% 이상</span></div>
+            <div style="width: 1px; height: 30px; background-color: #e2e8f0;"></div>
+            <div style="flex: 1; text-align: center;"><strong>🔥 적극 상향</strong><br><span style="color: #a0aec0; font-size: 12px;">80% ~ 150%</span></div>
+            <div style="width: 1px; height: 30px; background-color: #e2e8f0;"></div>
+            <div style="flex: 1; text-align: center;"><strong>📈 소극 개선</strong><br><span style="color: #a0aec0; font-size: 12px;">40% ~ 80%</span></div>
+            <div style="width: 1px; height: 30px; background-color: #e2e8f0;"></div>
+            <div style="flex: 1; text-align: center;"><strong>⚖️ 현상 유지</strong><br><span style="color: #a0aec0; font-size: 12px;">0% ~ 40%</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
