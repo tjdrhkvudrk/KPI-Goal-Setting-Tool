@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (가독성 및 보고용 박스 스타일)
+# 2. CSS 디자인
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -36,36 +36,26 @@ st.markdown("""
     .bg-current { background-color: #D69E2E; }
     .bg-future { background-color: #4A5568; }
     .sub-header { background-color: #f1f3f5; padding: 5px; text-align: center; font-size: 13px; font-weight: bold; border: 1px solid #dee2e6; border-top: none; }
-    
     .sb-title { font-size: 16px !important; font-weight: 800 !important; color: #1A202C; margin-top: 15px; margin-bottom: 5px; display: block; }
-    
-    /* 레이블 숨기기 */
-    div[data-testid="stNumberInput"] label,
-    div[data-testid="stTextInput"] label,
-    div[data-testid="stRadio"] > label { display: none !important; }
-    
+    div[data-testid="stNumberInput"] label, div[data-testid="stTextInput"] label, div[data-testid="stRadio"] > label { display: none !important; }
     .auto-res { background-color: #F8FAFC; border: 1px solid #dee2e6; height: 42px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
     .guide-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-top: 15px; line-height: 1.8; }
     .recom-box { background-color: #FFF5F5; border: 1px solid #E53E3E; border-radius: 10px; padding: 20px; margin-top: 15px; border-left: 5px solid #E53E3E; }
     .guide-title { font-weight: bold; color: #2D3748; font-size: 16px; margin-bottom: 10px; display: block; }
-    
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
     td { text-align: center !important; }
     thead tr th:first-child, tbody tr th { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 사이드바 (입력 도구)
+# 3. 사이드바
 with st.sidebar:
     st.markdown('<p class="sb-title">📌 지표명</p>', unsafe_allow_html=True)
     지표명 = st.text_input("kpi_name_input", value="지표명 입력")
-    
     st.markdown('<p class="sb-title">🎯 지표 성격</p>', unsafe_allow_html=True)
     지표방향 = st.radio("direction_radio", ["상향", "하향"], horizontal=True)
-    
     st.markdown('<p class="sb-title">⚖️ 가중치</p>', unsafe_allow_html=True)
     가중치_값 = st.number_input("weight_input", value=5.000, step=0.001, format="%.3f")
-    
     st.markdown("---")
     display_name = 지표명 if 지표명 and 지표명 != "지표명 입력" else "미설정 지표"
     st.info(f"분석 대상: **{display_name}**")
@@ -104,23 +94,20 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
+# 실적 분석 안내
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
-avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
-avg_f = round(np.mean(미래_전망), 3)
-
 st.markdown(f"""
 <div class="guide-box">
     <span class="guide-title">📑 실적 분석 참고내용</span>
     • <b>과거 3개년 실적 분석결과:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[-3])**(1/2)-1)*100, 3):.3f}%<br>
-    • <b>과거 5개년 실적 분석결과:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[0])**(1/4)-1)*100, 3):.3f}%<br>
-    • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3):.3f}%
+    • <b>중장기 전망 분석결과:</b> 평균 {round(np.mean(미래_전망), 3):.3f}, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3):.3f}%
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("---")
 
 if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
-    # 분석 로직
+    # 분석 로직 계산
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     방법별_설정 = [
         ("목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -144,11 +131,25 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
             "도전성 단계": 단계, "추세치 분석결과": 판정, "raw_도전성": 도전성_지수
         })
 
-    # --- 2. 결과 테이블 ---
+    # --- 2. 분석 결과 테이블 ---
     final_title = display_name if display_name != "미설정 지표" else "지표"
     st.subheader(f"2. {final_title} - 평가방법별 비교 분석 결과 및 임계점 진단")
     df_res = pd.DataFrame(결과_데이터)
     st.table(df_res.drop(columns=['raw_도전성']).style.format({col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]}))
+
+    # --- [위치 이동] 분석 지표 가이드 (표 바로 아래) ---
+    st.markdown("""
+    <div class="guide-box">
+        <span class="guide-title">💡 분석 지표 가이드</span>
+        <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
+        • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 경우로, 과거의 흐름을 완전히 벗어난 파격적 목표 수준<br>
+        • 🔥 <b>적극 상향</b>: 목표치가 과거 변동폭의 1.6배~3배 수준으로, 과거 성장세를 상회하는 공격적 목표 수준<br>
+        • 📈 <b>소극 개선</b>: 목표치가 과거 변동 범위 내에 존재하며, 과거의 완만한 우상향 추세를 따르는 안정적 수준<br>
+        • ⚖️ <b>현상 유지</b>: 목표치가 예상 실적과 유사하거나 과거 평균 수준에 머무르는 경우로, 과거 실적 평균 수준의 관리 중심 목표 수준<br><br>
+        <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
+        • ⚠️ <b>한계</b>: 목표치가 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.
+    </div>
+    """, unsafe_allow_html=True)
 
     # --- 3. 그래프 시뮬레이션 ---
     st.subheader("3. 2029년 중장기 전망 및 목표 수준 시뮬레이션")
@@ -187,20 +188,6 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
             1. <b>도전적 목표 설정의 적극성:</b> {compare_text} 이는 과거의 성과를 단순히 답습하는 것이 아니라, 잠재 역량을 최대한으로 이끌어내야 달성 가능한 <b>'Stretch Goal'</b> 성격의 수치입니다.<br>
             2. <b>통계적 타당성 기반의 상향 설정:</b> 본 안은 과거 변동 패턴 내에서 <b>통계적으로 수용 가능한 가장 높은 수준</b>을 지향합니다. 단순히 무리한 수치를 제시하는 것이 아니라, 과거 실적의 표준편차를 정밀 분석하여 '근거 있는 상향'을 도출함으로써 목표의 정당성을 확보하였습니다.<br>
             3. <b>실현 가능한 한계치(Boundary) 확보:</b> 역량상의 임계점(3-Sigma)을 넘지 않는 범위 내에서 최고치를 설정함으로써, <b>도전성은 극대화하되 달성 가능성은 포기하지 않는</b> 최적의 균형점을 찾았습니다.<br>
-            4. <b>미래 성장성 반영:</b> 예측 모델({미래_전망[-1]:.3f})이 제시하는 중장기 전망치보다 높은 목표 설정을 통해, 대내외에 혁신적인 성과 창출 의지를 표명하고 조직의 지속적인 성장을 견인하고자 합니다.
+            4. <b>미래 성장성 반영:</b> 예측 모델이 제시하는 중장기 전망치보다 높은 목표 설정을 통해, 대내외에 혁신적인 성과 창출 의지를 표명하고 조직의 지속적인 성장을 견인하고자 합니다.
         </div>
         """, unsafe_allow_html=True)
-
-    # --- 최종 가이드 박스 (복구 완료) ---
-    st.markdown("""
-    <div class="guide-box">
-        <span class="guide-title">💡 분석 지표 가이드</span>
-        <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
-        • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 경우로, 과거의 흐름을 완전히 벗어난 파격적 목표 수준<br>
-        • 🔥 <b>적극 상향</b>: 목표치가 과거 변동폭의 1.6배~3배 수준으로, 과거 성장세를 상회하는 공격적 목표 수준<br>
-        • 📈 <b>소극 개선</b>: 목표치가 과거 변동 범위 내에 존재하며, 과거의 완만한 우상향 추세를 따르는 안정적 수준<br>
-        • ⚖️ <b>현상 유지</b>: 목표치가 예상 실적과 유사하거나 과거 평균 수준에 머무르는 경우로, 과거 실적 평균 수준의 관리 중심 목표 수준<br><br>
-        <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
-        • ⚠️ <b>한계</b>: 목표치가 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.
-    </div>
-    """, unsafe_allow_html=True)
