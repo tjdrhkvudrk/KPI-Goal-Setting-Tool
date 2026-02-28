@@ -1,7 +1,4 @@
 streamlit
-ipywidgets
 pandas
 numpy
 matplotlib
-
-
