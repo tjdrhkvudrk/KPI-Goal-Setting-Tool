@@ -6,7 +6,7 @@ import matplotlib.font_manager as fm
 import os
 import requests
 
-# 1. 한글 폰트 설정 (기존 완벽 기능 유지)
+# 1. 한글 폰트 설정
 @st.cache_resource
 def load_korean_font():
     font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (표 레이아웃 및 카드 스타일)
+# 2. CSS 디자인
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -40,29 +40,26 @@ st.markdown("""
     div[data-testid="stNumberInput"] label, div[data-testid="stTextInput"] label, div[data-testid="stRadio"] > label { display: none !important; }
     .auto-res { background-color: #F8FAFC; border: 1px solid #dee2e6; height: 42px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
     
-    /* 1번 밑 설명 가이드 박스 (사용자 원본 스타일) */
     .guide-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-top: 15px; line-height: 1.8; }
     .guide-title { font-weight: bold; color: #2D3748; font-size: 16px; margin-bottom: 10px; display: block; }
     
-    /* 4번 가이드 카드 스타일 */
     .report-card { background-color: #EBF8FF; border-left: 8px solid #2B6CB0; border-radius: 10px; padding: 25px; margin-top: 20px; }
 
-    /* 표 디자인 */
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
-    td { text-align: center !important; vertical-align: middle !important; }
-    .merged-cell { background-color: #EDF2F7; font-weight: bold; color: #2D3748; }
+    td { text-align: center !important; vertical-align: middle !important; border: 1px solid #E2E8F0; }
+    .merged-cell { background-color: #EDF2F7; font-weight: bold; color: #2D3748; width: 120px; }
+    .formula-box { background-color: #FFFFFF; border: 1px solid #CBD5E0; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 13px; margin: 5px 0; }
 </style>
 """, unsafe_allow_html=True)
 
 # 3. 사이드바
 with st.sidebar:
     st.markdown('<p style="font-size:16px; font-weight:800; color:#1A202C;">📌 지표명</p>', unsafe_allow_html=True)
-    지표명 = st.text_input("kpi_name", value="지표명 입력")
+    지표명 = st.text_input("kpi_name", value="전략 KPI")
     st.markdown('<p style="font-size:16px; font-weight:800; color:#1A202C;">🎯 지표 성격</p>', unsafe_allow_html=True)
     지표방향 = st.radio("direction", ["상향", "하향"], horizontal=True)
     st.markdown('<p style="font-size:16px; font-weight:800; color:#1A202C;">⚖️ 가중치</p>', unsafe_allow_html=True)
     가중치_값 = st.number_input("weight", value=5.000, step=0.001, format="%.3f")
-    display_name = 지표명 if 지표명 and 지표명 != "지표명 입력" else "미설정 지표"
 
 st.title("⚖️ 중장기 성과지표 목표설정 및 한계점 분석기")
 
@@ -98,7 +95,7 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# [원본 복구] 실적 분석 참고내용 (사용자님 코드 그대로)
+# 실적 분석 참고내용 (원본 텍스트 유지)
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
 avg_f = round(np.mean(미래_전망), 3)
@@ -115,15 +112,14 @@ st.markdown(f"""
 st.markdown("---")
 
 if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
-    # 2. 분석 로직
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     
-    # [데이터 구성]
+    # 분석 데이터 생성
     방법별 = [
-        ("기존 통계 모델", "목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
-        ("기존 통계 모델", "목표부여(1편차)", round(기준치 + std3 if 지표방향=="상향" else 기준치 - std3, 3)),
-        ("기존 통계 모델", "목표부여(120%)", round(기준치 * 1.2 if 지표방향=="상향" else 기준치 * 0.8, 3)),
-        ("기존 통계 모델", "목표부여(110%)", round(기준치 * 1.1 if 지표방향=="상향" else 기준치 * 0.9, 3)),
+        ("목표부여", "목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
+        ("목표부여", "목표부여(1편차)", round(기준치 + std3 if 지표방향=="상향" else 기준치 - std3, 3)),
+        ("목표부여", "목표부여(120%)", round(기준치 * 1.2 if 지표방향=="상향" else 기준치 * 0.8, 3)),
+        ("목표부여", "목표부여(110%)", round(기준치 * 1.1 if 지표방향=="상향" else 기준치 * 0.9, 3)),
         ("시나리오 분석", "도전 시나리오", round(slope * 6 + intercept + (std5 * 1.5) if 지표방향=="상향" else slope * 6 + intercept - (std5 * 1.5), 3)),
         ("시나리오 분석", "유지 시나리오", round(slope * 6 + intercept, 3)),
         ("시나리오 분석", "보수 시나리오", round(slope * 6 + intercept - (std5 * 1.0) if 지표방향=="상향" else slope * 6 + intercept + (std5 * 1.0), 3))
@@ -138,25 +134,21 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
         도전성_지수 = round((zp / 2.0) * 100, 3)
         단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지"
         판정 = "⚠️ 한계" if (abs(최고 - 기준치) > (3 * std3) or abs(최고/기준치 - 1) > 0.3) else "✅ 유지"
-        
-        결과_데이터.append({
-            "구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, 
-            "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정, "raw": 도전성_지수
-        })
+        결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
-    # [제목 수정] 평가방법별 목표 도전성 비교
-    st.subheader(f"2. {display_name} - 평가방법별 목표 도전성 비교")
+    # [수정] 2번 제목에서 지표명 제거
+    st.subheader("2. 평가방법별 목표 도전성 비교")
     
-    # 표 출력 (행 통합 효과를 위해 HTML로 수동 생성)
+    # 표 HTML 생성 (목표부여/시나리오 분석 통합)
     html_table = f"""
-    <table style="width:100%; border-collapse: collapse; text-align: center; font-size: 14px;">
+    <table style="width:100%; border-collapse: collapse; text-align: center;">
         <thead>
             <tr style="background-color: #4A5568; color: white;">
                 <th>구분</th><th>평가방법</th><th>기준치</th><th>최고목표</th><th>예상평점</th><th>예상득점</th><th>도전성 단계</th><th>분석결과</th>
             </tr>
         </thead>
         <tbody>
-            <tr><td rowspan="4" class="merged-cell">기존 통계 모델</td><td>{결과_데이터[0]['평가방법']}</td><td>{결과_데이터[0]['기준치']:.3f}</td><td>{결과_데이터[0]['최고목표']:.3f}</td><td>{결과_데이터[0]['예상평점']:.3f}</td><td>{결과_데이터[0]['예상득점']:.3f}</td><td>{결과_데이터[0]['도전성 단계']}</td><td>{결과_데이터[0]['분석결과']}</td></tr>
+            <tr><td rowspan="4" class="merged-cell">목표부여</td><td>{결과_데이터[0]['평가방법']}</td><td>{결과_데이터[0]['기준치']:.3f}</td><td>{결과_데이터[0]['최고목표']:.3f}</td><td>{결과_데이터[0]['예상평점']:.3f}</td><td>{결과_데이터[0]['예상득점']:.3f}</td><td>{결과_데이터[0]['도전성 단계']}</td><td>{결과_데이터[0]['분석결과']}</td></tr>
             <tr><td>{결과_데이터[1]['평가방법']}</td><td>{결과_데이터[1]['기준치']:.3f}</td><td>{결과_데이터[1]['최고목표']:.3f}</td><td>{결과_데이터[1]['예상평점']:.3f}</td><td>{결과_데이터[1]['예상득점']:.3f}</td><td>{결과_데이터[1]['도전성 단계']}</td><td>{결과_데이터[1]['분석결과']}</td></tr>
             <tr><td>{결과_데이터[2]['평가방법']}</td><td>{결과_데이터[2]['기준치']:.3f}</td><td>{결과_데이터[2]['최고목표']:.3f}</td><td>{결과_데이터[2]['예상평점']:.3f}</td><td>{결과_데이터[2]['예상득점']:.3f}</td><td>{결과_데이터[2]['도전성 단계']}</td><td>{결과_데이터[2]['분석결과']}</td></tr>
             <tr><td>{결과_데이터[3]['평가방법']}</td><td>{결과_데이터[3]['기준치']:.3f}</td><td>{결과_데이터[3]['최고목표']:.3f}</td><td>{결과_데이터[3]['예상평점']:.3f}</td><td>{결과_데이터[3]['예상득점']:.3f}</td><td>{결과_데이터[3]['도전성 단계']}</td><td>{결과_데이터[3]['분석결과']}</td></tr>
@@ -168,22 +160,26 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     """
     st.markdown(html_table, unsafe_allow_html=True)
 
-    # [원본 유지] 가이드 설명
-    st.markdown("""
+    # [수정] 분석 지표 가이드 3번 추가
+    st.markdown(f"""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
         <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
         • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 경우로, 과거의 흐름을 완전히 벗어난 파격적 목표 수준<br>
         • 🔥 <b>적극 상향</b>: 목표치가 과거 변동폭의 1.6배~3배 수준으로, 과거 성장세를 상회하는 공격적 목표 수준<br>
         • 📈 <b>소극 개선</b>: 목표치가 과거 변동 범위 내에 존재하며, 과거의 완만한 우상향 추세를 따르는 안정적 수준<br>
-        • ⚖️ <b>현상 유지</b>: 목표치가 예상 실적과 유사하거나 과거 평균 수준에 머무르는 경우로, 과거 실적 평균 수준의 관리 중심 목표 수준<br><br>
+        • ⚖️ <b>현상 유지</b>: 목표치가 예상 실적과 유사하거나 과거 평균 수준에 머무르는 경우로, 관리 중심 목표 수준<br><br>
         <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
-        • ⚠️ <b>한계</b>: 목표치가 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.
+        • ⚠️ <b>한계</b>: 목표치가 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.<br><br>
+        <b>3. 시나리오 분석 산식 및 평가 기준 (추이 분석 기반)</b><br>
+        • <b>도전 시나리오:</b> 과거 5개년 추세선 상의 2026년 기대값 + (과거 5개년 표준편차 × 1.5). 과거 최대 변동폭 이상의 성과를 가정한 수준입니다.<br>
+        • <b>유지 시나리오:</b> 회귀 분석을 통한 추세선상의 2026년 예측값($$y = ax + b$$). 과거의 성장 흐름이 그대로 지속될 때의 기대 수준입니다.<br>
+        • <b>보수 시나리오:</b> 과거 5개년 추세선 상의 2026년 기대값 - (과거 5개년 표준편차 × 1.0). 대내외 여건 악화로 성장이 정체될 경우를 가정한 수준입니다.
     </div>
     """, unsafe_allow_html=True)
 
     # 3. 그래프
-    st.subheader("3. 2029년 중장기 전망 및 목표 시나리오 맵")
+    st.subheader("3. 2029년 중장기 전망 및 목표 시나리오 시뮬레이션")
     fig, ax = plt.subplots(figsize=(11, 5))
     연도_축 = [f"'{y-2000}" for y in range(2021, 2030)]
     ax.plot(연도_축, slope * np.arange(9) + intercept, color='#CBD5E0', linestyle='--', label='중장기 추세선')
@@ -194,17 +190,12 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1.0, 1.0))
     st.pyplot(fig)
 
-    # 4. 최종 보고 가이드 (시나리오 강조)
-    st.subheader("4. 최종 보고 및 도전성 입증 가이드")
+    # 4. 최종 보고 가이드
     st.markdown(f"""
     <div class="report-card">
-        <span style="font-weight:bold; color:#2B6CB0; font-size:18px;">🎯 시나리오 분석 기반 성과목표 제안 요약</span><br><br>
-        본 보고서는 <b>과거 5개년 실적 추이를 정밀 분석</b>하여 미래 실적 변동성을 시뮬레이션한 결과입니다. 
-        단순 통계 모델과 시나리오 모델을 비교 검토한 결과, <b>[도전 시나리오]</b>를 최종 목표(<b>{결과_데이터[4]['최고목표']:.3f}</b>)로 제안합니다.
-    </div>
-    <div class="guide-box">
-        <b>[도전성 입증 논리]</b><br>
-        • <b>추이 분석 결과:</b> 과거 5개년 추세선(Slope) 대비 공격적인 가중치를 부여한 시나리오를 채택하여 실질적 'Stretch Goal'임을 증명함.<br>
-        • <b>방어 논리:</b> "통계적 임계치 내에서 최상의 도전성을 확보한 안으로, 조직의 혁신 동기를 부여할 수 있는 최적의 목표 지점임."
+        <span style="font-weight:bold; color:#2B6CB0; font-size:18px;">🎯 시나리오 분석 기반 성과목표 제안</span><br><br>
+        본 보고서는 <b>과거 5개년 실적 추이 정밀 분석</b>을 기반으로 실적 변동성을 모델링하였습니다. 
+        분석 결과, 추세선 대비 상향 목표인 <b>[도전 시나리오]</b>를 최종 목표(<b>{결과_데이터[4]['최고목표']:.3f}</b>)로 제안하며, 
+        이는 단순 통계 모델인 목표부여(1편차) 안보다 높은 도전성을 확보한 결과입니다.
     </div>
     """, unsafe_allow_html=True)
