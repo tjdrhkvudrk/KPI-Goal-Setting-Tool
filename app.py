@@ -15,19 +15,20 @@ st.markdown("""
 # 사이드바: 기본 설정
 st.sidebar.header("📍 지표 기본 설정")
 indicator_name = st.sidebar.text_input("지표명", value="주요사업 성과지표")
-weight = st.sidebar.number_input("가중치", value=5.0)
+weight = st.sidebar.number_input("가중치", value=5.000, format="%.3f")
 direction = st.sidebar.selectbox("지표 방향", ["상향", "하향"])
-long_term_goal = st.sidebar.number_input("중장기 목표(Y+3)", value=160.0)
+long_term_goal = st.sidebar.number_input("중장기 목표(Y+3)", value=160.000, format="%.3f")
 
 # 메인화면: 실적 입력
 st.subheader("1. 실적 데이터 입력")
 col1, col2, col3, col4, col5, col6 = st.columns(6)
-with col1: y5 = st.number_input("Y-5 실적", value=100.0)
-with col2: y4 = st.number_input("Y-4 실적", value=105.0)
-with col3: y3 = st.number_input("Y-3 실적", value=110.0)
-with col4: y2 = st.number_input("Y-2 실적", value=115.0)
-with col5: y1 = st.number_input("Y-1 실적", value=120.0)
-with col6: est = st.number_input("당해 예상실적", value=130.0)
+# format="%.3f"를 추가하여 입력창에서도 소수점 셋째 자리까지 표시되도록 설정
+with col1: y5 = st.number_input("Y-5 실적", value=100.000, format="%.3f")
+with col2: y4 = st.number_input("Y-4 실적", value=105.000, format="%.3f")
+with col3: y3 = st.number_input("Y-3 실적", value=110.000, format="%.3f")
+with col4: y2 = st.number_input("Y-2 실적", value=115.000, format="%.3f")
+with col5: y1 = st.number_input("Y-1 실적", value=120.000, format="%.3f")
+with col6: est = st.number_input("당해 예상실적", value=130.000, format="%.3f")
 
 hist = [y5, y4, y3, y2, y1]
 
@@ -56,9 +57,20 @@ if st.button("🚀 모든 방법론 통합 분석 실행"):
     results = []
     for m_name, hi, lo in methods:
         if direction == "하향": hi, lo = lo, hi
+        # 평점(Score) 계산
         score = max(20.0, min(100.0, 20 + 80 * (est - lo) / (hi - lo)))
+        # 가중치를 곱한 최종 득점
+        weighted_score = (score / 100) * weight
+        # 도전성(%)
         stretch = abs(hi - base) / base * 100
-        results.append({"방법론": m_name, "최고목표(S)": round(hi, 2), "도전성(%)": round(stretch, 1), "예상평점": round(score, 2)})
+        
+        results.append({
+            "방법론": m_name, 
+            "최고목표(S)": round(hi, 3), 
+            "도전성(%)": round(stretch, 3), 
+            "예상평점": round(score, 3),
+            "예상득점": round(weighted_score, 3)
+        })
     
     df = pd.DataFrame(results)
     
@@ -70,12 +82,25 @@ if st.button("🚀 모든 방법론 통합 분석 실행"):
     
     # 결과 출력
     st.subheader("2. 방법론별 비교 분석 결과")
-    st.dataframe(df.style.highlight_max(axis=0, subset=['예상평점']))
+    # 표에서 모든 숫자를 소수점 셋째 자리까지 고정 표시
+    st.dataframe(df.style.format({
+        "최고목표(S)": "{:.3f}",
+        "도전성(%)": "{:.3f}%",
+        "예상평점": "{:.3f}",
+        "예상득점": "{:.3f}"
+    }).highlight_max(axis=0, subset=['예상평점']))
 
     # 시각화
     fig, ax = plt.subplots(figsize=(10, 4))
-    ax.bar(df['방법론'], df['최고목표(S)'], color='skyblue')
-    ax.axhline(base, color='red', linestyle='--', label=f'기준치({base:.2f})')
+    bars = ax.bar(df['방법론'], df['최고목표(S)'], color='skyblue')
+    ax.axhline(base, color='red', linestyle='--', label=f'기준치({base:.3f})')
+    
+    # 막대 그래프 상단에 수치 표시
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height,
+                f'{height:.3f}', ha='center', va='bottom')
+
     ax.set_title("방법론별 S등급 목표치 비교")
     plt.xticks(rotation=45)
     st.pyplot(fig)
@@ -85,5 +110,5 @@ if st.button("🚀 모든 방법론 통합 분석 실행"):
     st.info(f"""
     **[도전성 소명 문구]** 본 기관은 {indicator_name} 지표의 목표 설정을 위해 6개 평가 방법론을 시뮬레이션 하였습니다. 
     그 결과, 가장 도전적인 수치를 제시하는 **[{most_difficult['방법론']}]** 방식을 채택하였습니다. 
-    이는 기준치 대비 **{most_difficult['도전성(%)']}% 상향**된 수준으로, 타 방식 대비 가장 엄격한 목표입니다.
+    이는 기준치({base:.3f}) 대비 **{most_difficult['도전성(%)']:.3f}% 상향**된 **{most_difficult['최고목표(S)']:.3f}**를 S등급 목표로 설정한 것으로, 타 방식 대비 가장 엄격한 목표입니다.
     """)
