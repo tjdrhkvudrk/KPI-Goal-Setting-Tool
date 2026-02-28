@@ -12,27 +12,33 @@ past_years = [current_year - i for i in range(5, 0, -1)]  # [2021, 2022, 2023, 2
 
 st.title("⚖️ 경영평가 계량지표 통합 시뮬레이터")
 
-# 시각적 개선을 위한 CSS: 자동 계산 셀 배경색 및 글자색 강화
+# 시각적 개선을 위한 CSS
 st.markdown("""
 <style>
-    /* 자동 계산 항목(disabled)의 스타일 커스텀 */
+    /* 1. 자동 계산 항목(disabled) 스타일: 배경색 유지 및 검정 글씨 */
     input:disabled {
-        -webkit-text-fill-color: #000000 !important; /* 글자색 검정 */
+        -webkit-text-fill-color: #000000 !important;
         color: #000000 !important;
         font-weight: 600 !important;
-        background-color: #E8F0FE !important; /* 연한 파란색 배경 (엑셀 자동계산 느낌) */
-        border: 1px solid #adc6ff !important; /* 테두리도 살짝 강조 */
+        background-color: #E8F0FE !important;
+        border: 1px solid #adc6ff !important;
         opacity: 1 !important;
-        cursor: not-allowed;
     }
     
-    /* 대분류 헤더 디자인 */
+    /* 2. 직접 입력 항목 스타일: 배경색 없음(흰색), 검정 글씨 */
+    .stNumberInput input {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    /* 3. 대분류 헤더 디자인 (글자 크기 키움) */
     .main-header-box {
         background-color: #f0f2f6;
         padding: 10px;
         border-radius: 5px;
         text-align: center;
-        font-weight: bold;
+        font-weight: 800; /* 더 굵게 */
+        font-size: 1.1em; /* 크기 키움 */
         border: 1px solid #d1d5db;
         display: flex;
         align-items: center;
@@ -41,20 +47,20 @@ st.markdown("""
         margin-bottom: 5px;
     }
     
-    /* 소분류 라벨 디자인 */
+    /* 4. 소분류 라벨 및 제목 라벨 (연도 및 표준편차 글자 크기 키움) */
     .sub-label-text {
         text-align: center;
-        font-size: 0.9em;
-        font-weight: bold;
-        color: #333;
+        font-size: 1.0em; /* 0.9em에서 키움 */
+        font-weight: 700; /* 더 굵게 */
+        color: #111;
         margin-bottom: 8px;
-        height: 20px;
+        height: 25px;
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
-    /* 입력칸 높이 미세 조정 */
+    /* 입력칸 위치 조정 */
     .stNumberInput, .stTextInput {
         margin-top: -5px;
     }
@@ -102,6 +108,7 @@ base_val = max(avg_3y, last_year_val) if direction == "상향" else min(avg_3y, 
 
 # [자동 계산 및 독립 열 입력부]
 with data_cols[5]:
+    # 표준편차 라벨 강조 및 글자 크기 확대
     st.markdown('<div class="sub-label-text">5개년 표준편차</div>', unsafe_allow_html=True)
     st.text_input("표준편차", value=f"{std_5y:.3f}", label_visibility="collapsed", disabled=True)
 
