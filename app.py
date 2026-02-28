@@ -6,7 +6,7 @@ import matplotlib.font_manager as fm
 import os
 import requests
 
-# 1. 한글 폰트 설정 (기존 로직 유지)
+# 1. 한글 폰트 설정 (기본 로직 유지)
 @st.cache_resource
 def load_korean_font():
     font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (기존 스타일 완벽 유지)
+# 2. CSS 디자인 (기본 스타일 완벽 유지)
 st.set_page_config(page_title="계량 성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -98,7 +98,6 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# 1번 항목 가이드 문구 (토씨 하나 틀리지 않고 유지)
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
 전망_데이터 = [예상_2026] + 미래_전망
@@ -142,7 +141,7 @@ if st.button("🚀 시뮬레이션 및 분석 실행"):
         판정 = "✅ 유지" if (abs(최고 - 기준치) <= (3 * std3) and abs(최고/기준치 - 1) <= 0.3) else "⚠️ 한계"
         결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
-    # 2. 결과 테이블 (디자인 및 병합 셀 유지)
+    # 2. 결과 테이블
     st.subheader("2. 평가방법별 목표 도전성 비교")
     html_table = f"""
     <table style="width:100%; border-collapse: collapse; text-align: center;">
@@ -164,7 +163,6 @@ if st.button("🚀 시뮬레이션 및 분석 실행"):
     """
     st.markdown(html_table, unsafe_allow_html=True)
 
-    # 2번 항목 가이드 문구 (토씨 하나 틀리지 않고 유지)
     st.markdown(f"""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
@@ -182,7 +180,7 @@ if st.button("🚀 시뮬레이션 및 분석 실행"):
     </div>
     """, unsafe_allow_html=True)
 
-    # 3. 그래프 (기존 로직 완벽 유지)
+    # 3. 그래프
     st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
     years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
     idx_future = np.arange(6, 10)
@@ -207,9 +205,60 @@ if st.button("🚀 시뮬레이션 및 분석 실행"):
     ax.grid(axis='y', linestyle='-', alpha=0.1)
     st.pyplot(fig)
 
-    # 4. 도전적 목표 설정 가이드 (디자인 카드 렌더링 수정본)
+    # 4. 도전적 목표 설정 가이드 (디자인 카드 출력)
     st.markdown("---")
     st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
 
     st.markdown("""
-    <div style="background-color: #f8fafc; border-left: 5px solid #3182ce; padding: 15px; margin-bottom: 2
+    <div style="background-color: #f8fafc; border-left: 5px solid #3182ce; padding: 15px; margin-bottom: 20px; font-size: 14px;">
+        💡 <b>어떤 평가방법을 선택해야 할까요?</b><br>
+        • 성과 극대화 필요 시: '도전 시나리오' 또는 '목표부여(2편차)'<br>
+        • 합리적 성장 반영 시: '유지 시나리오' 또는 '목표부여(1편차)'
+    </div>
+    """, unsafe_allow_html=True)
+
+    c_sel1, c_sel2 = st.columns(2)
+    with c_sel1:
+        선택방법 = st.selectbox("🎯 담당자 최종 선택", [r['평가방법'] for r in 결과_데이터], index=4)
+    with c_sel2:
+        비교방법 = st.selectbox("⚖️ 비교 대상 (대조군)", [r['평가방법'] for r in 결과_데이터], index=5)
+
+    sel = next(item for item in 결과_데이터 if item["평가방법"] == 선택방법)
+    comp = next(item for item in 결과_데이터 if item["평가방법"] == 비교방법)
+    gap = round(abs(sel['최고목표'] - comp['최고목표']), 3)
+    sigma_lv = round(abs(sel['최고목표'] - 예상_2026) / std5, 2) if std5 != 0 else 0
+    improvement_rate = round((abs(sel['최고목표'] - 예상_2026) / 예상_2026) * 100, 2) if 예상_2026 != 0 else 0
+
+    st.markdown(f"""
+    <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span style="background-color: #ebf8ff; color: #2b6cb0; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">
+                AI 논리 분석 결과: {sel['도전성 단계']}
+            </span>
+            <span style="color: #718096; font-size: 13px;">분석 기준일: 2026. 02. 28.</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
+            <div style="text-align: center; padding: 15px; background-color: #f7fafc; border-radius: 10px;">
+                <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">목표 상향액(Gap)</div>
+                <div style="font-size: 18px; font-weight: 800; color: #2d3748;">{gap}</div>
+            </div>
+            <div style="text-align: center; padding: 15px; background-color: #f7fafc; border-radius: 10px;">
+                <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">변동성 대비(Sigma)</div>
+                <div style="font-size: 18px; font-weight: 800; color: #2d3748;">{sigma_lv}σ</div>
+            </div>
+            <div style="text-align: center; padding: 15px; background-color: #f7fafc; border-radius: 10px;">
+                <div style="font-size: 12px; color: #a0aec0; margin-bottom: 5px;">예상 대비 증감</div>
+                <div style="font-size: 18px; font-weight: 800; color: #e53e3e;">{improvement_rate}%</div>
+            </div>
+        </div>
+
+        <div style="line-height: 1.8; color: #4a5568; border-top: 1px solid #edf2f7; padding-top: 20px;">
+            <p><b>[보고서용 목표 설정 근거 초안]</b></p>
+            1. 본 지표의 목표치(<b>{sel['최고목표']:.3f}</b>)는 예상 실적 대비 과거 5개년 변동폭의 <b>{sigma_lv}배</b> 수준으로, 
+            단순 추세 연장을 탈피한 <b>{sel['도전성 단계']}</b> 목표임을 확인하였습니다.<br>
+            2. 대안 모델인 '{비교방법}({comp['최고목표']:.3f})' 대비 <b>{gap}</b>의 추가 상향을 통해 기관의 성과 창출 의지를 적극 반영하였습니다.<br>
+            3. 중장기 전망(CAGR {cagr_f:.3f}%) 분석 결과, 본 목표는 향후 성장 궤도를 선도할 수 있는 전략적 임계점에 위치하고 있습니다.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
