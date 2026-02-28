@@ -3,16 +3,16 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 페이지 설정
+# 1. 페이지 설정
 st.set_page_config(page_title="경영평가 지표 시뮬레이터", layout="wide")
 
 # 현재 연도 기준 설정 (2026년)
-current_year = 2026 
-past_years = [current_year - i for i in range(5, 0, -1)]
+현재_연도 = 2026 
+과거_연도_리스트 = [현재_연도 - i for i in range(5, 0, -1)]
 
 st.title("⚖️ 경영평가 계량지표 통합 시뮬레이터")
 
-# 시각적 개선을 위한 CSS
+# 시각적 개선을 위한 스타일 설정
 st.markdown("""
 <style>
     input:disabled {
@@ -37,160 +37,161 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 사이드바 설정
+# 2. 사이드바 설정
 st.sidebar.header("📍 지표 기본 설정")
-indicator_name = st.sidebar.text_input("지표명", value="주요사업 성과지표")
-weight = st.sidebar.number_input("가중치", value=5.000, format="%.3f")
-direction = st.sidebar.selectbox("지표 방향", ["상향", "하향"])
+지표명 = st.sidebar.text_input("지표명", value="주요사업 성과지표")
+가중치 = st.sidebar.number_input("가중치", value=5.000, format="%.3f")
+지표방향 = st.sidebar.selectbox("지표 방향", ["상향", "하향"])
 
-# 1. 실적 데이터 입력 섹션
+# 3. 실적 데이터 입력 섹션
 st.subheader("1. 실적 데이터 입력")
 
-header_cols = st.columns([6, 1, 1, 1])
-with header_cols[0]: st.markdown('<div class="main-header-box">과거 5개년 실적</div>', unsafe_allow_html=True)
-with header_cols[1]: st.markdown('<div class="main-header-box">과거 3개년 평균</div>', unsafe_allow_html=True)
-with header_cols[2]: st.markdown('<div class="main-header-box">기준치</div>', unsafe_allow_html=True)
-with header_cols[3]: st.markdown('<div class="main-header-box">2026년 예상실적</div>', unsafe_allow_html=True)
+상단_헤더 = st.columns([6, 1, 1, 1])
+with 상단_헤더[0]: st.markdown('<div class="main-header-box">과거 5개년 실적</div>', unsafe_allow_html=True)
+with 상단_헤더[1]: st.markdown('<div class="main-header-box">과거 3개년 평균</div>', unsafe_allow_html=True)
+with 상단_헤더[2]: st.markdown('<div class="main-header-box">기준치</div>', unsafe_allow_html=True)
+with 상단_헤더[3]: st.markdown('<div class="main-header-box">2026년 예상실적</div>', unsafe_allow_html=True)
 
-data_cols = st.columns(9)
+입력_열 = st.columns(9)
 
-hist_raw = []
-for i, year in enumerate(past_years):
-    with data_cols[i]:
-        st.markdown(f'<div class="sub-label-text">{year}년</div>', unsafe_allow_html=True)
-        val = st.number_input(f"{year}실적", label_visibility="collapsed", value=100.000 + (i*5), format="%.3f", key=f"h_{i}")
-        hist_raw.append(val)
+실적_리스트 = []
+for i, 연도 in enumerate(과거_연도_리스트):
+    with 입력_열[i]:
+        st.markdown(f'<div class="sub-label-text">{연도}년</div>', unsafe_allow_html=True)
+        값 = st.number_input(f"{연도}실적", label_visibility="collapsed", value=100.000 + (i*5), format="%.3f", key=f"실적_{i}")
+        실적_리스트.append(값)
 
-valid_hist = [v for v in hist_raw if v > 0]
-std_val = np.std(valid_hist) if len(valid_hist) > 1 else 0.000
-avg_3y = np.mean(hist_raw[-3:])
-last_year_val = hist_raw[-1]
-base_val = max(avg_3y, last_year_val) if direction == "상향" else min(avg_3y, last_year_val)
+# 기초 계산 로직
+유효실적 = [v for v in 실적_리스트 if v > 0]
+표준편차 = np.std(유효실적) if len(유효실적) > 1 else 0.000
+삼개년_평균 = np.mean(실적_리스트[-3:])
+전년도_실적 = 실적_리스트[-1]
+기준치 = max(삼개년_평균, 전년도_실적) if 지표방향 == "상향" else min(삼개년_평균, 전년도_실적)
 
-with data_cols[5]:
+with 입력_열[5]:
     st.markdown('<div class="sub-label-text">과거 표준편차</div>', unsafe_allow_html=True)
-    st.text_input("표준편차", value=f"{std_val:.3f}", label_visibility="collapsed", disabled=True)
-with data_cols[6]:
+    st.text_input("편차표시", value=f"{표준편차:.3f}", label_visibility="collapsed", disabled=True)
+with 입력_열[6]:
     st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True) 
-    st.text_input("평균", value=f"{avg_3y:.3f}", label_visibility="collapsed", disabled=True)
-with data_cols[7]:
+    st.text_input("평균표시", value=f"{삼개년_평균:.3f}", label_visibility="collapsed", disabled=True)
+with 입력_열[7]:
     st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True)
-    st.text_input("기준치", value=f"{base_val:.3f}", label_visibility="collapsed", disabled=True)
-with data_cols[8]:
+    st.text_input("기준치표시", value=f"{기준치:.3f}", label_visibility="collapsed", disabled=True)
+with 입력_열[8]:
     st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True)
-    est = st.number_input("예상실적", value=base_val * 1.05, format="%.3f", label_visibility="collapsed")
+    예상실적 = st.number_input("예상실적입력", value=기준치 * 1.05, format="%.3f", label_visibility="collapsed")
 
-# --- 2. 분석 실행 및 결과 섹션 ---
+# 4. 분석 실행 및 결과 섹션
 st.markdown("---")
 if st.button("🚀 모든 평가방법 통합 분석 실행"):
     
-    # [도전성 지수 zp 계산 준비]
-    X = np.array([1, 2, 3, 4, 5])
-    Y = np.array(hist_raw)
-    slope, intercept = np.polyfit(X, Y, 1)
-    trend_2026 = slope * 6 + intercept
+    # [도전성 지수 계산을 위한 통계 준비]
+    X_축 = np.array([1, 2, 3, 4, 5])
+    Y_축 = np.array(실적_리스트)
+    기울기, 절편 = np.polyfit(X_축, Y_축, 1)
+    미래_추세치 = 기울기 * 6 + 절편
     
-    # 보정 로직: 과거 변동성(S)이 너무 작을 경우 기준치의 10%를 하한으로 설정
-    s_resid = np.sqrt(np.sum((Y - (intercept + slope * X))**2) / 3)
-    min_S = abs(base_val * 0.10)
-    S_val = max(s_resid * np.sqrt(1 + (1/5) + (9/10)), min_S)
+    # 보정 로직: 변동성이 너무 작을 때를 대비해 기준치의 10%를 최소 오차로 설정
+    잔차_표준편차 = np.sqrt(np.sum((Y_축 - (절편 + 기울기 * X_축))**2) / 3)
+    최소_변동폭 = abs(기준치 * 0.10)
+    보정_표준오차 = max(잔차_표준편차 * np.sqrt(1 + (1/5) + (9/10)), 최소_변동폭)
 
-    is_up = (direction == "상향")
-    if is_up:
-        methods_data = [
-            ("목표부여(2편차)", base_val + 2*std_val, base_val - 2*std_val),
-            ("목표부여(1편차)", base_val + 1*std_val, base_val - 2*std_val),
-            ("목표부여(120%)", base_val * 1.200, base_val * 0.800),
-            ("목표부여(110%)", base_val * 1.100, base_val * 0.800)
+    상향_여부 = (지표방향 == "상향")
+    if 상향_여부:
+        방법별_데이터 = [
+            ("목표부여(2편차)", 기준치 + 2*표준편차, 기준치 - 2*표준편차),
+            ("목표부여(1편차)", 기준치 + 1*표준편차, 기준치 - 2*표준편차),
+            ("목표부여(120%)", 기준치 * 1.200, 기준치 * 0.800),
+            ("목표부여(110%)", 기준치 * 1.100, 기준치 * 0.800)
         ]
     else:
-        methods_data = [
-            ("목표부여(2편차)", base_val - 2*std_val, base_val + 2*std_val),
-            ("목표부여(1편차)", base_val - 1*std_val, base_val + 2*std_val),
-            ("목표부여(120%)", base_val * 0.800, base_val * 1.200),
-            ("목표부여(110%)", base_val * 0.900, base_val * 1.200)
+        방법별_데이터 = [
+            ("목표부여(2편차)", 기준치 - 2*표준편차, 기준치 + 2*표준편차),
+            ("목표부여(1편차)", 기준치 - 1*표준편차, 기준치 + 2*표준편차),
+            ("목표부여(120%)", 기준치 * 0.800, 기준치 * 1.200),
+            ("목표부여(110%)", 기준치 * 0.900, 기준치 * 1.200)
         ]
 
-    results = []
-    for m_name, hi, lo in methods_data:
-        if hi == lo:
-            score = 60.000
+    결과_데이터 = []
+    for 명칭, 최고, 최저 in 방법별_데이터:
+        if 최고 == 최저:
+            평점 = 60.000
         else:
-            score = 20 + 80 * ((est - lo) / (hi - lo))
+            평점 = 20 + 80 * ((예상실적 - 최저) / (최고 - 최저))
         
-        score = max(20.0, min(100.0, score))
-        weighted_score = (score / 100) * weight
+        평점 = max(20.0, min(100.0, 평점))
+        예상득점 = (평점 / 100) * 가중치
         
-        # 도전성 지수 계산 및 판정
-        zp = (hi - trend_2026) / S_val if is_up else (trend_2026 - hi) / S_val
-        challenge_score = (zp / 2.0) * 100
+        # 도전성 지수 계산
+        지수 = (최고 - 미래_추세치) / 보정_표준오차 if 상향_여부 else (미래_추세치 - 최고) / 보정_표준오차
+        도전성_백분율 = (지수 / 2.0) * 100
 
-        if challenge_score >= 150: status = "🏆 한계 혁신"
-        elif challenge_score >= 80: status = "🔥 적극 상향"
-        elif challenge_score >= 40: status = "📈 소극 개선"
-        elif challenge_score >= 0: status = "⚖️ 현상 유지"
-        else: status = "⚠️ 하향 설정"
+        if 도전성_백분율 >= 150: 단계 = "🏆 한계 혁신"
+        elif 도전성_백분율 >= 80: 단계 = "🔥 적극 상향"
+        elif 도전성_백분율 >= 40: 단계 = "📈 소극 개선"
+        elif 도전성_백분율 >= 0: 단계 = "⚖️ 현상 유지"
+        else: 단계 = "⚠️ 하향 설정"
 
-        results.append({
-            "평가방법": m_name, "지표성격": direction, "기준치": round(base_val, 3),
-            "최고목표": round(hi, 3), "최저목표": round(lo, 3), "예상실적": round(est, 3),
-            "예상평점": round(score, 3), "가중치": round(weight, 3), "예상득점": round(weighted_score, 3),
-            "도전성 단계": status
+        결과_데이터.append({
+            "평가방법": 명칭, "지표성격": 지표방향, "기준치": round(기준치, 3),
+            "최고목표": round(최고, 3), "최저목표": round(최저, 3), "예상실적": round(예상실적, 3),
+            "예상평점": round(평점, 3), "가중치": round(가중치, 3), "예상득점": round(예상득점, 3),
+            "도전성 단계": 단계
         })
     
-    df = pd.DataFrame(results)
+    표_데이터 = pd.DataFrame(결과_데이터)
     st.subheader("2. 평가방법별 비교 분석 결과")
     
     st.dataframe(
-        df.style.format({
+        표_데이터.style.format({
             "기준치": "{:.3f}", "최고목표": "{:.3f}", "최저목표": "{:.3f}", 
             "예상실적": "{:.3f}", "예상평점": "{:.3f}", "가중치": "{:.3f}", "예상득점": "{:.3f}"
         }).highlight_max(axis=0, subset=['예상평점'], color='#D4EDDA'), 
         use_container_width=True
     )
 
-    # 🚩 도전성 5단계 판정 기준 각주
+    # 5. 도전성 설명 섹션 (기호 제거 버전)
     st.markdown("""
     <div style='background-color: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 5px solid #d1d5db; margin-top: 10px;'>
-        <b style='font-size: 0.95em; color: #333;'>🚩 도전성 5단계 판정 기준 (통계 보정 반영)</b><br>
+        <b style='font-size: 0.95em; color: #333;'>🚩 도전성 5단계 판정 기준</b><br>
         <div style='font-size: 0.88em; color: #555; margin-top: 8px; line-height: 1.8;'>
             • <span style='color: #d9534f;'><b>1단계 (⚠️ 하향 설정)</b></span> : 도전성 지수 0% 미만 (과거 추세보다 낮은 목표)<br>
-            • <span style='color: #777;'><b>2단계 (⚖️ 현상 유지)</b></span> : 도전성 지수 0% 이상 (정상 추세 범위 내 목표)<br>
-            • <span style='color: #f0ad4e;'><b>3단계 (📈 소극 개선)</b></span> : 도전성 지수 40% 이상 (유의미한 개선 목표)<br>
-            • <span style='color: #0275d8;'><b>4단계 (🔥 적극 상향)</b></span> : 도전성 지수 80% 이상 (도전적인 상향 목표)<br>
-            • <span style='color: #5cb85c;'><b>5단계 (🏆 한계 혁신)</b></span> : 도전성 지수 150% 이상 (과거 추세를 완전히 탈피한 목표)
+            • <span style='color: #777;'><b>2단계 (⚖️ 현상 유지)</b></span> : 도전성 지수 0% 이상 (정상적 추세 반영)<br>
+            • <span style='color: #f0ad4e;'><b>3단계 (📈 소극 개선)</b></span> : 도전성 지수 40% 이상 (유의미한 개선 수준)<br>
+            • <span style='color: #0275d8;'><b>4단계 (🔥 적극 상향)</b></span> : 도전성 지수 80% 이상 (강도 높은 목표 설정)<br>
+            • <span style='color: #5cb85c;'><b>5단계 (🏆 한계 혁신)</b></span> : 도전성 지수 150% 이상 (과거 추세를 뛰어넘는 혁신적 목표)
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 🔍 도전성 지수 산출방법 설명 박스
     st.markdown("""
     <div style='background-color: #ffffff; padding: 12px; border: 1px solid #e6e9ef; border-radius: 5px; margin-top: 10px;'>
-        <p style='font-size: 0.85em; font-weight: bold; color: #444; margin-bottom: 5px;'>🔍 도전성 지수($zp$) 산출방법</p>
-        <p style='font-size: 0.8em; color: #666; line-height: 1.5;'>
-            도전성 지수는 과거 5개년 실적의 회귀직선을 통해 예측된 <b>2026년 추세치($Trend$)</b>를 기준으로, 설정된 <b>최고목표($Target$)</b>가 통계적 오차범위 내에서 얼마나 멀리 떨어져 있는지를 측정합니다.<br><br>
-            $$zp = \\frac{Target - Trend}{S_{val}}$$ <br>
-            (단, $S_{val}$은 추정의 표준오차이며, 변동성이 극도로 적은 경우 기준치의 10%를 하한으로 보정하여 지수의 과다산출을 방지합니다.)
+        <p style='font-size: 0.85em; font-weight: bold; color: #444; margin-bottom: 5px;'>🔍 도전성 지수 산출방법</p>
+        <p style='font-size: 0.8em; color: #666; line-height: 1.6;'>
+            도전성 지수는 과거 5개년 실적의 <b>미래 추세 예측값</b>을 기준으로, 이번에 설정한 <b>최고목표</b>가 얼마나 멀리 떨어져 있는지를 측정합니다.<br><br>
+            <b>[계산식]</b><br>
+            도전성 지수 = (최고목표 - 미래 추세치) ÷ 표준오차<br><br>
+            ※ 과거 실적 변동이 너무 적은 경우, 기준치의 10%를 최소 변동폭으로 적용하여 지수가 과도하게 높게 나오는 것을 방지했습니다.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
     # 그래프 시각화
     fig, ax = plt.subplots(figsize=(10, 4))
-    x = np.arange(len(df))
-    ax.bar(x - 0.2, df['최고목표'], 0.4, label='최고목표', color='skyblue')
-    ax.bar(x + 0.2, df['최저목표'], 0.4, label='최저목표', color='lightgrey')
-    ax.axhline(base_val, color='red', linestyle='--', label='기준치')
+    x = np.arange(len(표_데이터))
+    ax.bar(x - 0.2, 표_데이터['최고목표'], 0.4, label='최고목표', color='skyblue')
+    ax.bar(x + 0.2, 표_데이터['최저목표'], 0.4, label='최저목표', color='lightgrey')
+    ax.axhline(기준치, color='red', linestyle='--', label='기준치')
     ax.set_xticks(x)
-    ax.set_xticklabels(df['평가방법'], rotation=45)
+    ax.set_xticklabels(표_데이터['평가방법'], rotation=45)
     ax.legend()
     st.pyplot(fig)
 
-    # 3. 산출 방식 가이드 (주석)
+    # 6. 하단 산식 가이드
     st.markdown("---")
     st.info("""
     **💡 주요 산식 가이드**
-    * **예상평점**: $20 + 80 \\times (예상실적 - 최저목표) / (최고목표 - 최저목표)$
-    * **예상득점**: $(예상평점 / 100) \\times 가중치$
-    * **특이사항**: 상향 지표는 목표가 높을수록, 하향 지표는 목표가 낮을수록 높은 도전성 단계가 부여됩니다.
+    * 예상평점: 20 + 80 × (예상실적 - 최저목표) ÷ (최고목표 - 최저목표)
+    * 예상득점: (예상평점 ÷ 100) × 가중치
+    * 상향 지표는 목표가 높을수록, 하향 지표는 목표가 낮을수록 더 높은 도전성 단계가 부여됩니다.
     """)
