@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (원본 유지 + 사이드바 제목 가시성 강화)
+# 2. CSS 디자인 (사이드바 라디오 버튼 텍스트 노출 수정)
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -37,7 +37,7 @@ st.markdown("""
     .bg-future { background-color: #4A5568; }
     .sub-header { background-color: #f1f3f5; padding: 5px; text-align: center; font-size: 13px; font-weight: bold; border: 1px solid #dee2e6; border-top: none; }
     
-    /* 사이드바 제목 스타일링 */
+    /* 사이드바 전용 제목 */
     .sb-title { 
         font-size: 16px !important; 
         font-weight: 800 !important; 
@@ -47,13 +47,18 @@ st.markdown("""
         display: block;
     }
     
-    /* 레이블 숨기기 로직 (모든 레이블 제거) */
+    /* 레이블 숨기기: 위젯 상단의 중복 제목만 숨기고 라디오 버튼의 옵션 텍스트는 유지 */
     div[data-testid="stNumberInput"] label,
     div[data-testid="stTextInput"] label,
-    div[data-testid="stRadio"] label { 
+    div[data-testid="stRadio"] > label { 
         display: none !important; 
     }
     
+    /* 라디오 버튼 옵션 간격 조정 */
+    div[data-testid="stRadio"] div[role="radiogroup"] {
+        padding-top: 5px;
+    }
+
     .auto-res { background-color: #F8FAFC; border: 1px solid #dee2e6; height: 42px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
     .guide-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-top: 15px; line-height: 1.8; }
     .guide-title { font-weight: bold; color: #2D3748; font-size: 16px; margin-bottom: 10px; display: block; }
@@ -63,22 +68,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 사이드바 개선 (불필요한 레이블 제거 및 입력값 초기화)
+# 3. 사이드바 구성 (라디오 버튼 텍스트 확인 가능)
 with st.sidebar:
     st.markdown('<p class="sb-title">📌 지표명</p>', unsafe_allow_html=True)
-    # 초기값을 "지표명 입력"으로 설정하여 사용자가 수정하게 함
-    지표명 = st.text_input("label_1", value="지표명 입력")
+    지표명 = st.text_input("kpi_name", value="지표명 입력")
     
     st.markdown('<p class="sb-title">🎯 지표 성격</p>', unsafe_allow_html=True)
-    지표방향 = st.radio("label_2", ["상향", "하향"], horizontal=True)
+    지표방향 = st.radio("direction", ["상향", "하향"], horizontal=True)
     
     st.markdown('<p class="sb-title">⚖️ 가중치</p>', unsafe_allow_html=True)
-    가중치_값 = st.number_input("label_3", value=5.000, step=0.001, format="%.3f")
+    가중치_값 = st.number_input("weight", value=5.000, step=0.001, format="%.3f")
     
     st.markdown("---")
-    # 지표명을 입력하지 않았을 때의 기본 처리
     display_name = 지표명 if 지표명 and 지표명 != "지표명 입력" else "미설정 지표"
-    st.info(f"현재 분석 지표: **{display_name}**")
+    st.info(f"선택 방향: **{지표방향}**\n\n분석 대상: **{display_name}**")
 
 st.title("⚖️ 중장기 성과지표 목표설정 및 한계점 분석기")
 
@@ -87,7 +90,7 @@ st.subheader("1. 실적 데이터 및 중장기 전망 입력")
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
 
-# --- 실적 데이터 입력 로직 (토씨 하나 틀리지 않음) ---
+# --- 실적 데이터 입력 (토씨 하나 틀리지 않음) ---
 with m_cols[0]:
     st.markdown('<div class="main-header bg-past">과거 5개년 실적 (2021~2025)</div>', unsafe_allow_html=True)
     p_cols = st.columns(5)
@@ -132,6 +135,7 @@ st.markdown(f"""
 # 4. 분석 실행 및 결과
 st.markdown("---")
 if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
+    # 지표방향 변수 사용
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     방법별 = [
         ("목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -156,13 +160,12 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
             "도전성 단계": 단계, "추세치 분석결과": 판정
         })
 
-    # 타이틀에서 "지표명 입력"이라는 기본값이 보이지 않도록 처리
     final_title = display_name if display_name != "미설정 지표" else "지표"
     st.subheader(f"2. {final_title} - 평가방법별 비교 분석 결과 및 임계점 진단")
     df_res = pd.DataFrame(결과_데이터)
     st.table(df_res.style.format({col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]}))
 
-    # 가이드 설명 (사용자 원본 문구 보존)
+    # 가이드 설명
     st.markdown("""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
