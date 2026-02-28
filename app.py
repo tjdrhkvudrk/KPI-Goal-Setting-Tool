@@ -26,22 +26,28 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인
+# 2. CSS 디자인 (사이드바 및 테이블 스타일)
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
     html, body, [class*="st-"] { font-size: 15px !important; font-family: 'NanumGothic', sans-serif; }
+    
+    /* 사이드바 커스텀 */
     .sidebar-label { font-size: 16px; font-weight: 800; color: #1A202C; margin-top: 15px; margin-bottom: 8px; display: block; }
     .sidebar-white-box { background-color: white; border-radius: 8px; padding: 12px; border: 1px solid #E2E8F0; margin-bottom: 5px; }
     div[data-testid="stNumberInput"] label, div[data-testid="stTextInput"] label, div[data-testid="stRadio"] > label { display: none !important; }
+
+    /* 메인 섹션 헤더 */
     .main-header { padding: 10px; color: white; text-align: center; font-weight: bold; margin-bottom: 5px; border-radius: 5px 5px 0 0; }
     .bg-past { background-color: #2D6A4F; }
     .bg-current { background-color: #D69E2E; }
     .bg-future { background-color: #4A5568; }
     .sub-header { background-color: #f1f3f5; padding: 5px; text-align: center; font-size: 13px; font-weight: bold; border: 1px solid #dee2e6; border-top: none; }
     .auto-res { background-color: #F8FAFC; border: 1px solid #dee2e6; height: 42px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+    
     .guide-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-top: 15px; line-height: 1.8; }
     .guide-title { font-weight: bold; color: #2D3748; font-size: 16px; margin-bottom: 10px; display: block; }
+    
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
     td { text-align: center !important; vertical-align: middle !important; border: 1px solid #E2E8F0; }
     .merged-cell { background-color: #EDF2F7; font-weight: bold; color: #2D3748; width: 120px; }
@@ -52,17 +58,19 @@ st.markdown("""
 with st.sidebar:
     st.markdown('<span class="sidebar-label">📌 지표명</span>', unsafe_allow_html=True)
     지표명 = st.text_input("kpi_name", value="전략 KPI")
+    
     st.markdown('<span class="sidebar-label">🎯 지표 성격</span>', unsafe_allow_html=True)
     st.markdown('<div class="sidebar-white-box">', unsafe_allow_html=True)
     지표방향 = st.radio("direction", ["상향", "하향"], horizontal=True)
     st.markdown('</div>', unsafe_allow_html=True)
+    
     st.markdown('<span class="sidebar-label">⚖️ 가중치</span>', unsafe_allow_html=True)
     가중치_값 = st.number_input("weight", value=5.000, step=0.001, format="%.3f")
 
-# --- [수정] 1번 제목 정정 ---
 st.title("⚖️ 중장기 성과지표 목표설정 및 한계점 분석기")
-st.subheader("1. 과거 5개년 및 2026년 실적 기반 중장기 실적 전망")
 
+# --- 1. 실적 데이터 및 전망 입력 ---
+st.subheader("1. 과거 5개년 및 2026년 실적 기반 중장기 실적 전망")
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
 
@@ -75,7 +83,7 @@ with m_cols[0]:
             val = st.number_input(f"p_{year}", value=round(100.0 + (i*5), 3), step=0.001, format="%.3f", key=f"v_{year}")
             실적_리스트.append(val)
 
-# 추세 기반 2026년 자동 계산
+# 2026년 자동 제안 로직
 X_past = np.arange(5)
 Y_past = np.array(실적_리스트)
 slope_p, intercept_p = np.polyfit(X_past, Y_past, 1)
@@ -84,7 +92,6 @@ suggested_2026 = round(slope_p * 5 + intercept_p, 3)
 with m_cols[1]:
     st.markdown('<div class="main-header bg-current">2026년 (예상치)</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">추세 기반 자동입력</div>', unsafe_allow_html=True)
-    # 여기에 해당 연도 수치가 자동으로 들어갑니다.
     예상_2026 = st.number_input("curr_2026", value=suggested_2026, step=0.001, format="%.3f", key="v_2026")
 
 with m_cols[2]:
@@ -100,7 +107,7 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# [복구 및 확정] 중장기 전망 분석결과 표준편차 포함
+# 실적 분석 수치 계산 (표준편차 포함)
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
 전망_데이터 = [예상_2026] + 미래_전망
@@ -111,12 +118,13 @@ st.markdown(f"""
     <span class="guide-title">📑 실적 분석 참고내용</span>
     • <b>과거 3개년 실적 분석결과:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[-3])**(1/2)-1)*100, 3) if 실적_리스트[-3]!=0 else 0:.3f}%<br>
     • <b>과거 5개년 실적 분석결과:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[0])**(1/4)-1)*100, 3) if 실적_리스트[0]!=0 else 0:.3f}%<br>
-    • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, <b>표준편차 {std_f:.3f}</b>, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3) if 예상_2026!=0 else 0:.3f}%
+    • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, 표준편차 {std_f:.3f}, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3) if 예상_2026!=0 else 0:.3f}%
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("---")
 
+# --- 2. 분석 및 테이블 출력 ---
 if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     
@@ -162,3 +170,47 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     </table>
     """
     st.markdown(html_table, unsafe_allow_html=True)
+
+    # --- 3. 그래프 분석 및 가이드 (복구 완료) ---
+    st.markdown(f"""
+    <div class="guide-box">
+        <span class="guide-title">💡 분석 지표 가이드</span>
+        <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
+        • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 파격적 수준<br>
+        • 🔥 <b>적극 상향</b>: 과거 변동폭의 1.6배~3배 수준의 공격적 목표<br>
+        • 📈 <b>소극 개선</b>: 과거 변동 범위 내 완만한 우상향 추세<br>
+        • ⚖️ <b>현상 유지</b>: 관리 중심 수준<br><br>
+        <b>2. 분석결과 (한계 판정 기준)</b><br>
+        • ⚠️ <b>한계</b>: 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달함을 의미
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
+    years_all = [f"'{y-2000}" for y in range(2021, 2030)]
+    years_past = years_all[:6]
+    years_future = years_all[5:]
+    idx_future = np.arange(6, 10)
+    base_trend = slope_f * idx_future + intercept_f
+    
+    line_challenge = [예상_2026] + list(base_trend[1:] + (std5 * 1.5 if 지표방향=="상향" else -std5 * 1.5))
+    line_maintain = [예상_2026] + list(base_trend[1:])
+    line_conservative = [예상_2026] + list(base_trend[1:] - (std5 * 1.0 if 지표방향=="상향" else -std5 * 1.0))
+
+    fig, ax = plt.subplots(figsize=(13, 6.5))
+    ax.plot(years_all, slope_f * np.arange(9) + intercept_f, color='#EDF2F7', linestyle=':', label='기초 추세선', zorder=1)
+    ax.plot(years_future, line_challenge, color='#3182CE', linestyle='--', linewidth=2, label='도전 시나리오', zorder=2)
+    ax.plot(years_future, line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오', zorder=2)
+    ax.plot(years_future, line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오', zorder=2)
+    ax.fill_between(years_future, line_conservative, line_challenge, color='#EBF8FF', alpha=0.3)
+    ax.plot(years_past, Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=3)
+
+    # 2026 강조점
+    ax.scatter(years_all[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=10)
+
+    for row in 결과_데이터:
+        if row['구분'] == "목표부여":
+            ax.scatter(years_all[5], row['최고목표'], s=120, zorder=5, edgecolors='white', linewidth=1, label=f"{row['평가방법']}")
+
+    ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
+    ax.grid(axis='y', linestyle='-', alpha=0.1)
+    st.pyplot(fig)
