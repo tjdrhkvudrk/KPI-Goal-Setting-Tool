@@ -59,7 +59,6 @@ with st.sidebar:
     st.markdown('<span class="sidebar-label">⚖️ 가중치</span>', unsafe_allow_html=True)
     가중치_값 = st.number_input("weight", value=5.000, step=0.001, format="%.3f")
 
-# --- [수정] 메인 제목 변경 ---
 st.title("⚖️ 성과지표 목표 설정 시뮬레이터")
 st.subheader("1. 과거 5개년 및 2026년 실적 기반 중장기 실적 전망")
 
@@ -139,6 +138,7 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
         판정 = "✅ 유지" if (abs(최고 - 기준치) <= (3 * std3) and abs(최고/기준치 - 1) <= 0.3) else "⚠️ 한계"
         결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
+    # --- 2. 평가방법별 목표 도전성 비교 ---
     st.subheader("2. 평가방법별 목표 도전성 비교")
     html_table = f"""
     <table style="width:100%; border-collapse: collapse; text-align: center;">
@@ -149,7 +149,7 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
         </thead>
         <tbody>
             <tr><td rowspan="4" class="merged-cell">목표부여</td><td>{결과_데이터[0]['평가방법']}</td><td>{결과_데이터[0]['기준치']:.3f}</td><td>{결과_데이터[0]['최고목표']:.3f}</td><td>{결과_데이터[0]['예상평점']:.3f}</td><td>{결과_데이터[0]['예상득점']:.3f}</td><td>{결과_데이터[0]['도전성 단계']}</td><td>{결과_데이터[0]['분석결과']}</td></tr>
-            <tr><td>{결과_데이터[1]['평가방법']}</td><td>{결과_데이터[1]['기준치']:.3f}</td><td>{결과_데이터[1]['최고목표']:.3f}</td><td>{결과_데이터[1]['예상평점']:.3f}</td><td>{결과_데이터[1]['예상득점']:.3f}</td><td>{결과_데이터[1]['도전성 단계']}</td><td>{결과_데이터[1]['분석결과']}</td></tr>
+            <tr><td>{결과_데이터[1]['평가방법']}</td><td>{결과_데이터[1]['기준치']:.3f}</td><td>{결결과_데이터[1]['최고목표']:.3f}</td><td>{결과_데이터[1]['예상평점']:.3f}</td><td>{결과_데이터[1]['예상득점']:.3f}</td><td>{결과_데이터[1]['도전성 단계']}</td><td>{결과_데이터[1]['분석결과']}</td></tr>
             <tr><td>{결과_데이터[2]['평가방법']}</td><td>{결과_데이터[2]['기준치']:.3f}</td><td>{결과_데이터[2]['최고목표']:.3f}</td><td>{결과_데이터[2]['예상평점']:.3f}</td><td>{결과_데이터[2]['예상득점']:.3f}</td><td>{결과_데이터[2]['도전성 단계']}</td><td>{결과_데이터[2]['분석결과']}</td></tr>
             <tr><td>{결과_데이터[3]['평가방법']}</td><td>{결과_데이터[3]['기준치']:.3f}</td><td>{결과_데이터[3]['최고목표']:.3f}</td><td>{결과_데이터[3]['예상평점']:.3f}</td><td>{결과_데이터[3]['예상득점']:.3f}</td><td>{결과_데이터[3]['도전성 단계']}</td><td>{결과_데이터[3]['분석결과']}</td></tr>
             <tr style="border-top: 2px solid #4A5568;"><td rowspan="3" class="merged-cell" style="background-color: #EBF8FF;">시나리오 분석</td><td>{결과_데이터[4]['평가방법']}</td><td>{결과_데이터[4]['기준치']:.3f}</td><td>{결과_데이터[4]['최고목표']:.3f}</td><td>{결과_데이터[4]['예상평점']:.3f}</td><td>{결과_데이터[4]['예상득점']:.3f}</td><td>{결과_데이터[4]['도전성 단계']}</td><td>{결과_데이터[4]['분석결과']}</td></tr>
@@ -160,7 +160,21 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     """
     st.markdown(html_table, unsafe_allow_html=True)
 
-    # --- 3. 그래프 분석 (범례 순서 및 추세선 삭제) ---
+    # [완벽 복구] 가이드 박스를 표 바로 아래로 배치
+    st.markdown(f"""
+    <div class="guide-box">
+        <span class="guide-title">💡 분석 지표 가이드</span>
+        <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
+        • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 경우로 파격적 목표 수준<br>
+        • 🔥 <b>적극 상향</b>: 과거 변동폭의 1.6배~3배 수준으로 공격적 목표 수준<br>
+        • 📈 <b>소극 개선</b>: 과거 변동 범위 내에 존재하며 완만한 우상향 추세를 따르는 수준<br>
+        • ⚖️ <b>현상 유지</b>: 관리 중심 목표 수준<br><br>
+        <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
+        • ⚠️ <b>한계</b>: 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미
+    </div>
+    """, unsafe_allow_html=True)
+
+    # --- 3. 중장기 추세 및 시나리오별 목표 궤적 분석 ---
     st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
     years_all = [f"'{y-2000}" for y in range(2021, 2030)]
     years_past = years_all[:6]
@@ -174,41 +188,27 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
 
     fig, ax = plt.subplots(figsize=(13, 6.5))
     
-    # [수정] 범례 순서를 위해 데이터 플로팅 순서 조정
-    # 1. 과거 실적 (제일 위로)
-    ax.plot(years_past, Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=10)
-    
-    # 2. 2026 기준점
-    ax.scatter(years_all[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=11)
-    
-    # 3. 시나리오 라인들
+    # 플로팅 순서: 과거 실적을 가장 나중에 그려서 범례 위로 올림
     ax.plot(years_future, line_challenge, color='#3182CE', linestyle='--', linewidth=2, label='도전 시나리오', zorder=2)
     ax.plot(years_future, line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오', zorder=2)
     ax.plot(years_future, line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오', zorder=2)
     
-    # 4. 개별 목표 점들 (방법별)
+    # 방법별 목표 점들
     for row in 결과_데이터:
         if row['구분'] == "목표부여":
             ax.scatter(years_all[5], row['최고목표'], s=120, zorder=12, edgecolors='white', linewidth=1, label=f"{row['평가방법']}")
 
-    ax.fill_between(years_future, line_conservative, line_challenge, color='#EBF8FF', alpha=0.3)
-    
-    # [수정] 기초 추세선 플로팅은 하되 label을 주지 않아 범례에서 제외
-    ax.plot(years_all, slope_f * np.arange(9) + intercept_f, color='#EDF2F7', linestyle=':', zorder=1)
+    # 기준점 및 과거 실적
+    ax.scatter(years_all[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=15)
+    ax.plot(years_past, Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=20)
 
-    ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
+    ax.fill_between(years_future, line_conservative, line_challenge, color='#EBF8FF', alpha=0.3)
+    ax.plot(years_all, slope_f * np.arange(9) + intercept_f, color='#EDF2F7', linestyle=':', zorder=1) # 라벨 없음
+
+    # 범례 순서 강제 조정 (과거 실적을 맨 위로)
+    handles, labels = ax.get_legend_handles_labels()
+    order = [labels.index("과거 5개년 실적")] + [i for i, l in enumerate(labels) if l != "과거 5개년 실적"]
+    ax.legend([handles[i] for i in order], [labels[i] for i in order], prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
+    
     ax.grid(axis='y', linestyle='-', alpha=0.1)
     st.pyplot(fig)
-
-    st.markdown(f"""
-    <div class="guide-box">
-        <span class="guide-title">💡 분석 지표 가이드</span>
-        <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
-        • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 파격적 수준<br>
-        • 🔥 <b>적극 상향</b>: 과거 변동폭의 1.6배~3배 수준의 공격적 목표<br>
-        • 📈 <b>소극 개선</b>: 과거 변동 범위 내 완만한 우상향 추세<br>
-        • ⚖️ <b>현상 유지</b>: 관리 중심 수준<br><br>
-        <b>2. 분석결과 (한계 판정 기준)</b><br>
-        • ⚠️ <b>한계</b>: 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달함을 의미
-    </div>
-    """, unsafe_allow_html=True)
