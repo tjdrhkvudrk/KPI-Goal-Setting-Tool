@@ -6,7 +6,7 @@ import matplotlib.font_manager as fm
 import os
 import requests
 
-# 1. 한글 폰트 설정
+# 1. 한글 폰트 및 설정
 @st.cache_resource
 def load_korean_font():
     font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (원본 스타일 유지)
+# 2. CSS 디자인 (원본 스타일 복구)
 st.set_page_config(page_title="계량 성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -48,7 +48,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 사이드바 (가중치 단위 삭제)
+# 3. 사이드바 (단위 표기 삭제)
 with st.sidebar:
     st.markdown('<span class="sidebar-label">📌 지표명</span>', unsafe_allow_html=True)
     지표명 = st.text_input("kpi_name", value="전략 KPI")
@@ -61,8 +61,9 @@ with st.sidebar:
 
 st.title("📊 계량 성과지표 목표 설정 및 중장기 전망 시뮬레이터")
 
-# 1. 실적 전망 (1번 복구)
-st.subheader("1. 과거 5개년 및 2026년 실적 기반 중장기 실적 전망")
+# ----------------------------------------------------------------
+# 1~3번 섹션 (완벽 복구된 로직 유지)
+# ----------------------------------------------------------------
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
 with m_cols[0]:
@@ -99,7 +100,6 @@ with m_cols[2]:
 
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
-전망_데이터 = [예상_2026] + 미래_전망
 cagr_f = round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3) if 예상_2026!=0 else 0
 
 st.markdown(f"""
@@ -113,7 +113,7 @@ st.markdown(f"""
 
 st.markdown("---")
 
-# 2. 도전성 비교 테이블 (2번 복구)
+# 2. 결과 테이블
 기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
 방법별 = [
     ("목표부여", "목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -153,7 +153,7 @@ html_table = f"""
 """
 st.markdown(html_table, unsafe_allow_html=True)
 
-# 3. 그래프 (포인트 복구 핵심!)
+# 3. 그래프 (목표부여 포인트 복구 확인)
 st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
 years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
 idx_future = np.arange(6, 10)
@@ -169,31 +169,33 @@ ax.plot(years_all_label[5:], line_challenge, color='#3182CE', linestyle='--', li
 ax.plot(years_all_label[5:], line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오')
 ax.plot(years_all_label[5:], line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오')
 
-# 사라졌던 목표부여 점들을 다시 찍어주는 코드 (복구 완료)
 colors = ['#E53E3E', '#DD6B20', '#38A169', '#805AD5']
 for i, row in enumerate(결과_데이터):
     if row['구분'] == "목표부여":
         ax.scatter(years_all_label[5], row['최고목표'], s=150, color=colors[i % 4], label=row['평가방법'], zorder=30, edgecolors='white')
 
 ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
-ax.set_xticks(years_all_label)
 ax.grid(axis='y', linestyle='-', alpha=0.1)
 st.pyplot(fig)
 
-# 4. 담당자 제언 (튕김 해결 + 카드 디자인)
+# ----------------------------------------------------------------
+# 4. 담당자 제언 (SyntaxError 해결 완료)
+# ----------------------------------------------------------------
 st.markdown("---")
 st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
 
 if 'f_idx' not in st.session_state: st.session_state.f_idx = 4
 if 'c_idx' not in st.session_state: st.session_state.c_idx = 5
 
+names = [r['평가방법'] for r in 결과_데이터]
+
 c1, c2 = st.columns(2)
 with c1:
-    선택방법 = st.selectbox("🎯 담당자 최종 선택", [r['평가방법'] for r in 결과_데이터], index=st.session_state.f_idx, key="box_f")
-    st.session_state.f_idx = [r['평가방법'] for r in 결과_데이터].index(선택방법)
+    선택방법 = st.selectbox("🎯 담당자 최종 선택", names, index=st.session_state.f_idx, key="box_f")
+    st.session_state.f_idx = names.index(선택방법)
 with c2:
-    비교방법 = st.selectbox("⚖️ 비교 대상 (대조군)", [r['평가방법'] for r in 결과_DATA_2 := 결과_데이터], index=st.session_state.c_idx, key="box_c")
-    st.session_state.c_idx = [r['평가방법'] for r in 결과_데이터].index(비교방법)
+    비교방법 = st.selectbox("⚖️ 비교 대상 (대조군)", names, index=st.session_state.c_idx, key="box_c")
+    st.session_state.c_idx = names.index(비교방법)
 
 sel = next(item for item in 결과_데이터 if item["평가방법"] == 선택방법)
 comp = next(item for item in 결과_데이터 if item["평가방법"] == 비교방법)
@@ -201,6 +203,7 @@ gap = round(abs(sel['최고목표'] - comp['최고목표']), 3)
 sigma_lv = round(abs(sel['최고목표'] - 예상_2026) / std5, 2) if std5 != 0 else 0
 imp_rate = round((abs(sel['최고목표'] - 예상_2026) / 예상_2026) * 100, 2) if 예상_2026 != 0 else 0
 
+# HTML 카드 디자인 (st.markdown을 한 번에 깔끔하게 닫았습니다)
 st.markdown(f"""
 <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
