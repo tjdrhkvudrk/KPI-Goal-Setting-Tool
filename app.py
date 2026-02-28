@@ -73,7 +73,7 @@ with m_cols[0]:
             val = st.number_input(f"p_{year}", value=round(100.0 + (i*5), 3), step=0.001, format="%.3f", key=f"v_{year}")
             실적_리스트.append(val)
 
-# [업데이트] 2026년 예상치 자동 제안 (추세 분석 기반)
+# [추가] 2026년 예상치 자동 제안 (과거 5개년 추세 기반)
 X_past = np.arange(5)
 Y_past = np.array(실적_리스트)
 slope_p, intercept_p = np.polyfit(X_past, Y_past, 1)
@@ -82,7 +82,6 @@ suggested_2026 = round(slope_p * 5 + intercept_p, 3)
 with m_cols[1]:
     st.markdown('<div class="main-header bg-current">2026년 (예상)</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">추세 기반 수정 가능</div>', unsafe_allow_html=True)
-    # 사용자가 직접 수정할 수 있게 유지하면서 기본값으로 추세 기반 제안값 설정
     예상_2026 = st.number_input("curr_2026", value=suggested_2026, step=0.001, format="%.3f", key="v_2026")
 
 with m_cols[2]:
@@ -98,7 +97,7 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# 실적 분석 참고내용 (원본 텍스트 유지)
+# [원본 복구] 실적 분석 참고내용
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
 avg_f = round(np.mean(미래_전망), 3)
@@ -115,7 +114,7 @@ st.markdown(f"""
 st.markdown("---")
 
 if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
-    # [업데이트] 하향 지표 대응 로직 포함
+    # [추가] 하향 지표 대응 기준치
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     
     방법별 = [
@@ -132,7 +131,6 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     오차 = max(np.std(Y_full), 기준치 * 0.1)
     for 분류, 명칭, 최고 in 방법별:
         최저 = round(기준치 * 0.8 if 지표방향=="상향" else 기준치 * 1.2, 3)
-        # 평점 계산 시 분모가 0이 되는 상황 방지
         denom = (최고 - 최저) if (최고 - 최저) != 0 else 1
         평점 = round(max(20.0, min(100.0, 20 + 80 * ((예상_2026 - 최저) / denom))), 3)
         zp = (최고 - 예상_2026) / 오차 if 지표방향=="상향" else (예상_2026 - 최고) / 오차
@@ -143,7 +141,7 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
 
     st.subheader("2. 평가방법별 목표 도전성 비교")
     
-    # [업데이트] 데이터 내보내기용 DataFrame 및 CSV 변환
+    # [추가] 엑셀 저장 버튼
     df_export = pd.DataFrame(결과_데이터)
     csv = df_export.to_csv(index=False).encode('utf-8-sig')
     st.download_button("📥 분석 결과 Excel(CSV)로 저장", csv, f"{지표방향}_{지표명}_분석결과.csv", "text/csv")
@@ -168,12 +166,15 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     """
     st.markdown(html_table, unsafe_allow_html=True)
 
+    # [완벽 복구] 가이드 섹션
     st.markdown(f"""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
         <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
         • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 경우로, 과거의 흐름을 완전히 벗어난 파격적 목표 수준<br>
-        • 🔥 <b>적극 상향</b>: 목표치가 과거 변동폭의 1.6배~3배 수준으로, 과거 성장세를 상회하는 공격적 목표 수준<br><br>
+        • 🔥 <b>적극 상향</b>: 목표치가 과거 변동폭의 1.6배~3배 수준으로, 과거 성장세를 상회하는 공격적 목표 수준<br>
+        • 📈 <b>소극 개선</b>: 목표치가 과거 변동 범위 내에 존재하며, 과거의 완만한 우상향 추세를 따르는 안정적 수준<br>
+        • ⚖️ <b>현상 유지</b>: 목표치가 예상 실적과 유사하거나 과거 평균 수준에 머무르는 경우로, 관리 중심 목표 수준<br><br>
         <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
         • ⚠️ <b>한계</b>: 목표치가 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.<br><br>
         <b>3. 시나리오 분석 산식 및 평가 기준 (추이 분석 기반)</b><br>
