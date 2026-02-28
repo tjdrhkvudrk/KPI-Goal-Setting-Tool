@@ -2,51 +2,41 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import platform
 
-# 1. 페이지 설정
+# 1. 한글 폰트 설정 (OS별 대응)
+def set_korean_font():
+    system_name = platform.system()
+    if system_name == "Windows":
+        plt.rc('font', family='Malgun Gothic')
+    elif system_name == "Darwin": # Mac
+        plt.rc('font', family='AppleGothic')
+    else: # Linux/Docker (Streamlit Cloud 등)
+        plt.rc('font', family='NanumGothic')
+    plt.rc('axes', unicode_minus=False)
+
+set_korean_font()
+
+# 페이지 설정
 st.set_page_config(page_title="경영평가 지표 시뮬레이터", layout="wide")
 
-# 현재 연도 기준 설정 (2026년)
 현재_연도 = 2026 
 과거_연도_리스트 = [현재_연도 - i for i in range(5, 0, -1)]
 
 st.title("⚖️ 경영평가 계량지표 통합 시뮬레이터")
 
-# 시각적 개선을 위한 스타일 설정 (표의 가운데 정렬 및 제목 강조 CSS 추가)
+# CSS 스타일 (표 가운데 정렬 및 디자인)
 st.markdown("""
 <style>
-    /* 입력 필드 스타일 */
-    input:disabled {
-        -webkit-text-fill-color: #000000 !important;
-        color: #000000 !important;
-        font-weight: 600 !important;
-        background-color: #E8F0FE !important;
-        border: 1px solid #adc6ff !important;
-        opacity: 1 !important;
-    }
-    .stNumberInput input { background-color: #ffffff !important; color: #000000 !important; }
-    
-    /* 헤더 박스 스타일 */
+    .stDataFrame td, .stDataFrame th { text-align: center !important; }
     .main-header-box {
         background-color: #f0f2f6; padding: 10px; border-radius: 5px;
-        text-align: center; font-weight: 800; font-size: 1.1em;
-        border: 1px solid #d1d5db; display: flex; align-items: center; justify-content: center;
-        height: 60px; margin-bottom: 5px;
+        text-align: center; font-weight: 800; border: 1px solid #d1d5db;
+        height: 60px; margin-bottom: 5px; display: flex; align-items: center; justify-content: center;
     }
     .sub-label-text {
-        text-align: center; font-size: 1.0em; font-weight: 700; color: #111;
-        margin-bottom: 8px; height: 25px; display: flex; align-items: center; justify-content: center;
-    }
-
-    /* 표(DataFrame) 스타일 강제 조정 */
-    .stDataFrame div[data-testid="stTable"] th {
-        background-color: #4A5568 !important;
-        color: white !important;
-        text-align: center !important;
-        font-weight: bold !important;
-    }
-    .stDataFrame div[data-testid="stTable"] td {
-        text-align: center !important;
+        text-align: center; font-weight: 700; margin-bottom: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -57,9 +47,8 @@ st.sidebar.header("📍 지표 기본 설정")
 가중치 = st.sidebar.number_input("가중치", value=5.000, format="%.3f")
 지표방향 = st.sidebar.selectbox("지표 방향", ["상향", "하향"])
 
-# 3. 실적 데이터 입력 섹션
+# 3. 실적 데이터 입력
 st.subheader("1. 실적 데이터 입력")
-
 상단_헤더 = st.columns([6, 1, 1, 1])
 with 상단_헤더[0]: st.markdown('<div class="main-header-box">과거 5개년 실적</div>', unsafe_allow_html=True)
 with 상단_헤더[1]: st.markdown('<div class="main-header-box">과거 3개년 평균</div>', unsafe_allow_html=True)
@@ -67,160 +56,111 @@ with 상단_헤더[2]: st.markdown('<div class="main-header-box">기준치</div>
 with 상단_헤더[3]: st.markdown('<div class="main-header-box">2026년 예상실적</div>', unsafe_allow_html=True)
 
 입력_열 = st.columns(9)
-
 실적_리스트 = []
 for i, 연도 in enumerate(과거_연도_리스트):
     with 입력_열[i]:
         st.markdown(f'<div class="sub-label-text">{연도}년</div>', unsafe_allow_html=True)
-        값 = st.number_input(f"{연도}실적", label_visibility="collapsed", value=100.000 + (i*5), format="%.3f", key=f"실적_{i}")
+        값 = st.number_input(f"{연도}실적", label_visibility="collapsed", value=100.0 + (i*5), format="%.3f", key=f"실적_{i}")
         실적_리스트.append(값)
 
-# 기초 계산 로직
 유효실적 = [v for v in 실적_리스트 if v > 0]
-표준편차 = np.std(유효실적) if len(유효실적) > 1 else 0.000
+표준편차 = np.std(유효실적) if len(유효실적) > 1 else 0.0
 삼개년_평균 = np.mean(실적_리스트[-3:])
 직전년도_실적 = 실적_리스트[-1]
 기준치 = max(삼개년_평균, 직전년도_실적) if 지표방향 == "상향" else min(삼개년_평균, 직전년도_실적)
 
 with 입력_열[5]:
     st.markdown('<div class="sub-label-text">과거 표준편차</div>', unsafe_allow_html=True)
-    st.text_input("편차표시", value=f"{표준편차:.3f}", label_visibility="collapsed", disabled=True)
+    st.text_input("편차", value=f"{표준편차:.3f}", label_visibility="collapsed", disabled=True)
 with 입력_열[6]:
     st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True) 
-    st.text_input("평균표시", value=f"{삼개년_평균:.3f}", label_visibility="collapsed", disabled=True)
+    st.text_input("평균", value=f"{삼개년_평균:.3f}", label_visibility="collapsed", disabled=True)
 with 입력_열[7]:
     st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True)
-    st.text_input("기준치표시", value=f"{기준치:.3f}", label_visibility="collapsed", disabled=True)
+    st.text_input("기준치", value=f"{기준치:.3f}", label_visibility="collapsed", disabled=True)
 with 입력_열[8]:
     st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True)
-    예상실적 = st.number_input("예상실적입력", value=기준치 * 1.05, format="%.3f", label_visibility="collapsed")
+    예상실적 = st.number_input("예상실적", value=기준치 * 1.05, format="%.3f", label_visibility="collapsed")
 
-# 4. 분석 실행 및 결과 섹션
+# 4. 분석 실행
 st.markdown("---")
 if st.button("🚀 모든 평가방법 통합 분석 실행"):
-    
-    # [통계 준비]
     X_축 = np.array([1, 2, 3, 4, 5])
     Y_축 = np.array(실적_리스트)
     기울기, 절편 = np.polyfit(X_축, Y_축, 1)
     미래_추세치 = 기울기 * 6 + 절편
     잔차_표준편차 = np.sqrt(np.sum((Y_축 - (절편 + 기울기 * X_축))**2) / 3)
-    최소_변동폭 = abs(기준치 * 0.10)
-    보정_표준오차 = max(잔차_표준편차 * np.sqrt(1 + (1/5) + (9/10)), 최소_변동폭)
+    보정_표준오차 = max(잔차_표준편차 * np.sqrt(1 + (1/5) + (9/10)), 기준치 * 0.1)
 
     상향_여부 = (지표방향 == "상향")
-    if 상향_여부:
-        방법별_데이터 = [
-            ("목표부여(2편차)", 기준치 + 2*표준편차, 기준치 - 2*표준편차),
-            ("목표부여(1편차)", 기준치 + 1*표준편차, 기준치 - 2*표준편차),
-            ("목표부여(120%)", 기준치 * 1.200, 기준치 * 0.800),
-            ("목표부여(110%)", 기준치 * 1.100, 기준치 * 0.800)
-        ]
-    else:
-        방법별_데이터 = [
-            ("목표부여(2편차)", 기준치 - 2*표준편차, 기준치 + 2*표준편차),
-            ("목표부여(1편차)", 기준치 - 1*표준편차, 기준치 + 2*표준편차),
-            ("목표부여(120%)", 기준치 * 0.800, 기준치 * 1.200),
-            ("목표부여(110%)", 기준치 * 0.900, 기준치 * 1.200)
-        ]
+    방법별_데이터 = [
+        ("목표부여(2편차)", 기준치 + 2*표준편차, 기준치 - 2*표준편차) if 상향_여부 else ("목표부여(2편차)", 기준치 - 2*표준편차, 기준치 + 2*표준편차),
+        ("목표부여(1편차)", 기준치 + 1*표준편차, 기준치 - 2*표준편차) if 상향_여부 else ("목표부여(1편차)", 기준치 - 1*표준편차, 기준치 + 2*표준편차),
+        ("목표부여(120%)", 기준치 * 1.2, 기준치 * 0.8) if 상향_여부 else ("목표부여(120%)", 기준치 * 0.8, 기준치 * 1.2),
+        ("목표부여(110%)", 기준치 * 1.1, 기준치 * 0.8) if 상향_여부 else ("목표부여(110%)", 기준치 * 0.9, 기준치 * 1.2)
+    ]
 
     결과_데이터 = []
     for 명칭, 최고, 최저 in 방법별_데이터:
-        평점 = 60.000 if 최고 == 최저 else 20 + 80 * ((예상실적 - 최저) / (최고 - 최저))
+        평점 = 60.0 if 최고 == 최저 else 20 + 80 * ((예상실적 - 최저) / (최고 - 최저))
         평점 = max(20.0, min(100.0, 평점))
-        예상득점 = (평점 / 100) * 가중치
         지수 = (최고 - 미래_추세치) / 보정_표준오차 if 상향_여부 else (미래_추세치 - 최고) / 보정_표준오차
-        도전성_백분율 = (지수 / 2.0) * 100
+        도전성 = (지수 / 2.0) * 100
+        단계 = "🏆 한계 혁신" if 도전성 >= 150 else "🔥 적극 상향" if 도전성 >= 80 else "📈 소극 개선" if 도전성 >= 40 else "⚖️ 현상 유지" if 도전성 >= 0 else "⚠️ 하향 설정"
+        
+        결과_데이터.append({"평가방법": 명칭, "3개년 평균": 삼개년_평균, "직전년도 실적": 직전년도_실적, "기준치": 기준치, "최고목표": 최고, "최저목표": 최저, "예상실적": 예상실적, "예상평점": 평점, "도전성 단계": 단계})
 
-        if 도전성_백분율 >= 150: 단계 = "🏆 한계 혁신"
-        elif 도전성_백분율 >= 80: 단계 = "🔥 적극 상향"
-        elif 도전성_백분율 >= 40: 단계 = "📈 소극 개선"
-        elif 도전성_백분율 >= 0: 단계 = "⚖️ 현상 유지"
-        else: 단계 = "⚠️ 하향 설정"
-
-        결과_데이터.append({
-            "평가방법": 명칭, 
-            "지표성격": 지표방향, 
-            "3개년 평균": 삼개년_평균,
-            "직전년도 실적": 직전년도_실적,
-            "기준치": 기준치,
-            "최고목표": 최고, 
-            "최저목표": 최저, 
-            "예상실적": 예상실적,
-            "예상평점": 평점, 
-            "가중치": 가중치, 
-            "예상득점": 예상득점,
-            "도전성 단계": 단계
-        })
-    
-    표_데이터 = pd.DataFrame(결과_데이터)
-    
-    # [스타일 적용 함수] 모든 셀 가운데 정렬 및 첫 열/첫 행 강조
-    def 스타일_함수(styler):
-        # 1. 모든 열 가운데 정렬
-        styler.set_properties(**{'text-align': 'center'})
-        # 2. 수치 형식 지정
-        styler.format({
-            "3개년 평균": "{:.3f}", "직전년도 실적": "{:.3f}", "기준치": "{:.3f}", 
-            "최고목표": "{:.3f}", "최저목표": "{:.3f}", "예상실적": "{:.3f}", 
-            "예상평점": "{:.3f}", "가중치": "{:.3f}", "예상득점": "{:.3f}"
-        })
-        # 3. 첫 번째 열(평가방법) 배경색 강조 및 글자 두껍게
-        styler.set_properties(subset=["평가방법"], **{
-            'background-color': '#F7FAFC',
-            'font-weight': 'bold',
-            'border-right': '2px solid #CBD5E0'
-        })
-        # 4. 예상평점 최대값 하이라이트
-        styler.highlight_max(axis=0, subset=['예상평점'], color='#D4EDDA')
-        return styler
-
+    df = pd.DataFrame(결과_데이터)
     st.subheader("2. 평가방법별 비교 분석 결과")
+    st.table(df.style.format({c: "{:.3f}" for c in df.columns if c not in ["평가방법", "도전성 단계"]}).set_properties(**{'text-align': 'center'}))
+
+    # 5. 가독성 개선된 그래프 (과거 추이 + 미래 목표)
+    st.subheader("3. 실적 추이 및 목표 수준 시각화")
     
-    # 스타일 적용하여 표 출력
-    st.table(스타일_함수(표_데이터.style))
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # [추이 그래프: 과거 5년 + 예상실적]
+        fig1, ax1 = plt.subplots(figsize=(10, 6))
+        연도_라벨 = [f"{y}년" for y in 과거_연도_리스트] + ["2026년(예상)"]
+        전체_실적 = 실적_리스트 + [예상실적]
+        
+        ax1.plot(연도_라벨[:-1], 실적_리스트, marker='o', color='#2c3e50', linewidth=2, label='과거 실적')
+        ax1.plot(연도_라벨[-2:], 전체_실적[-2:], marker='D', color='#e74c3c', linestyle='--', linewidth=2, label='예상 추이')
+        
+        ax1.fill_between(연도_라벨[:-1], 실적_리스트, color='#ecf0f1', alpha=0.3)
+        ax1.set_title(f"[{지표명}] 연도별 실적 추이", fontsize=14, pad=15)
+        ax1.grid(True, axis='y', linestyle=':', alpha=0.7)
+        ax1.legend()
+        st.pyplot(fig1)
 
-    # [도전성 기준 및 산출방법 설명 박스]
-    st.markdown("""
-    <div style='background-color: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 5px solid #d1d5db; margin-top: 10px;'>
-        <b style='font-size: 0.95em; color: #333;'>🚩 도전성 5단계 판정 기준</b><br>
-        <div style='font-size: 0.88em; color: #555; margin-top: 8px; line-height: 1.8;'>
-            • <span style='color: #d9534f;'><b>1단계 (⚠️ 하향 설정)</b></span> : 도전성 지수 0% 미만<br>
-            • <span style='color: #777;'><b>2단계 (⚖️ 현상 유지)</b></span> : 도전성 지수 0% 이상<br>
-            • <span style='color: #f0ad4e;'><b>3단계 (📈 소극 개선)</b></span> : 도전성 지수 40% 이상<br>
-            • <span style='color: #0275d8;'><b>4단계 (🔥 적극 상향)</b></span> : 도전성 지수 80% 이상<br>
-            • <span style='color: #5cb85c;'><b>5단계 (🏆 한계 혁신)</b></span> : 도전성 지수 150% 이상
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    with col2:
+        # [비교 그래프: 방법별 최고목표 vs 기준치]
+        fig2, ax2 = plt.subplots(figsize=(10, 6))
+        x = np.arange(len(df))
+        bars = ax2.bar(x, df['최고목표'], color='#3498db', alpha=0.8, label='방법별 최고목표', width=0.6)
+        ax2.axhline(기준치, color='#e67e22', linestyle='-', linewidth=2, label=f'기준치 ({기준치:.2f})')
+        ax2.axhline(예상실적, color='#27ae60', linestyle='--', linewidth=1.5, label=f'예상실적 ({예상실적:.2f})')
+        
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(df['평가방법'], rotation=15)
+        ax2.set_title("평가방법별 목표 수준 비교", fontsize=14, pad=15)
+        
+        # 바 위에 값 표시
+        for bar in bars:
+            height = bar.get_height()
+            ax2.text(bar.get_x() + bar.get_width()/2., height + 0.01, f'{height:.2f}', ha='center', va='bottom', fontsize=10)
+            
+        ax2.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        st.pyplot(fig2)
 
+    # 설명 박스
     st.markdown("""
-    <div style='background-color: #ffffff; padding: 12px; border: 1px solid #e6e9ef; border-radius: 5px; margin-top: 10px;'>
-        <p style='font-size: 0.85em; font-weight: bold; color: #444; margin-bottom: 5px;'>🔍 도전성 지수 산출방법</p>
-        <p style='font-size: 0.8em; color: #666; line-height: 1.6;'>
-            도전성 지수는 과거 5개년 실적의 <b>미래 추세 예측값</b>을 기준으로, 설정된 <b>최고목표</b>가 얼마나 멀리 떨어져 있는지를 측정합니다.<br><br>
-            <b>[계산식]</b><br>
-            도전성 지수 = (최고목표 - 미래 추세치) ÷ 표준오차<br><br>
-            ※ 과거 실적 변동이 너무 적은 경우, 기준치의 10%를 최소 변동폭으로 적용하여 지수의 과도하게 높게 나오는 것을 방지했습니다.
+    <div style='background-color: #ffffff; padding: 15px; border: 1px solid #e6e9ef; border-radius: 5px;'>
+        <p style='font-size: 0.9em; color: #666;'> 
+        <b>💡 그래프 해석 가이드</b><br>
+        1. <b>왼쪽 그래프</b>: 과거 5년간의 실제 흐름과 현재 내가 입력한 2026년 예상실적이 어떤 추세에 있는지 보여줍니다.<br>
+        2. <b>오른쪽 그래프</b>: 각 평가방법이 제시하는 최고목표 점을 기준치/예상실적과 비교합니다. 최고목표가 예상실적보다 낮아야 만점 달성이 수월합니다.
         </p>
     </div>
     """, unsafe_allow_html=True)
-
-    # 그래프 시각화
-    fig, ax = plt.subplots(figsize=(10, 4))
-    x = np.arange(len(표_데이터))
-    ax.bar(x - 0.2, 표_데이터['최고목표'], 0.4, label='최고목표', color='skyblue')
-    ax.bar(x + 0.2, 표_데이터['최저목표'], 0.4, label='최저목표', color='lightgrey')
-    ax.axhline(기준치, color='red', linestyle='--', label='기준치')
-    ax.set_xticks(x)
-    ax.set_xticklabels(표_데이터['평가방법'], rotation=45)
-    ax.legend()
-    st.pyplot(fig)
-
-    # 하단 산식 가이드
-    st.markdown("---")
-    st.info("""
-    **💡 주요 산식 가이드**
-    * 예상평점: 20 + 80 × (예상실적 - 최저목표) ÷ (최고목표 - 최저목표)
-    * 예상득점: (예상평점 ÷ 100) × 가중치
-    """)
