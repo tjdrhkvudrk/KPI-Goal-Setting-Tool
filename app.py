@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (가독성 최우선)
+# 2. CSS 디자인 (사용자님 선호 스타일)
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -49,7 +49,7 @@ st.markdown("""
 
 st.title("⚖️ 중장기 성과지표 목표설정 및 한계점 분석기")
 
-# 사이드바 (소수점 셋째자리 고정)
+# 사이드바
 가중치_값 = st.sidebar.number_input("가중치", value=5.000, step=0.001, format="%.3f")
 지표방향 = st.sidebar.selectbox("지표 방향", ["상향", "하향"])
 
@@ -74,7 +74,7 @@ with m_cols[1]:
     st.markdown('<div class="sub-header">실적 입력</div>', unsafe_allow_html=True)
     예상_2026 = st.number_input("curr_2026", value=round(실적_리스트[-1] * 1.05, 3), step=0.001, format="%.3f", key="v_2026")
 
-# --- 미래 전망 섹션 (자동계산) ---
+# --- 미래 전망 섹션 ---
 with m_cols[2]:
     st.markdown('<div class="main-header bg-future">중장기 실적 전망 (자동)</div>', unsafe_allow_html=True)
     f_cols = st.columns(3)
@@ -88,22 +88,21 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# 4. 실적 분석 참고내용 (셋째자리 반올림 적용)
+# 실적 분석 참고내용
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
 avg_f = round(np.mean(미래_전망), 3)
-cagr_f = round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3)
 
 st.markdown(f"""
 <div class="guide-box">
     <span class="guide-title">📑 실적 분석 참고내용</span>
     • <b>과거 3개년 실적 분석결과:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[-3])**(1/2)-1)*100, 3):.3f}%<br>
     • <b>과거 5개년 실적 분석결과:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[0])**(1/4)-1)*100, 3):.3f}%<br>
-    • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, 연평균 증가율 {cagr_f:.3f}%
+    • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3):.3f}%
 </div>
 """, unsafe_allow_html=True)
 
-# 5. 분석 실행 및 결과
+# 4. 분석 실행 및 결과
 st.markdown("---")
 if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
@@ -123,39 +122,39 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         도전성_지수 = round((zp / 2.0) * 100, 3)
         단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지"
         판정 = "⚠️ 한계" if (abs(최고 - 기준치) > (3 * std3) or abs(최고/기준치 - 1) > 0.3) else "✅ 유지"
+        
         결과_데이터.append({
             "평가방법": 명칭, "지표성격": 지표방향, "기준치": 기준치, "최저목표": 최저, "최고목표": 최고,
-            "예상실적": 예상_2026, "예상평점": 평점, "가중치": 가중치_값, "예상득점": round(평점 * (가중치_값 / 100.0), 3),
+            "예상실적": 예상_2026, "예상평점": 평점, "가중치": 가중치_값, "예상득점": round(평점 * (가중치_값 / 100.0), 3), 
             "도전성 단계": 단계, "추세치 분석결과": 판정
         })
 
     st.subheader("2. 평가방법별 비교 분석 결과 및 임계점 진단")
-    st.table(pd.DataFrame(결과_데이터).style.format({
-        col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]
-    }))
+    df_res = pd.DataFrame(결과_데이터)
+    st.table(df_res.style.format({col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]}))
 
-    # 완벽하다고 하셨던 가이드 섹션 유지 (수식 포함)
+    # [수정] 사용자님이 "마음에 든다"고 하셨던 원본 설명 그대로 복구
     st.markdown("""
     <div class="guide-box">
-        <span class="guide-title">💡 분석 지표 가이드 (정량적 근거)</span>
-        <b>1. 도전성 단계 분석: 과거 추세선 대비 목표치가 얼마나 상향되었는지를 통계적으로 산출한 등급입니다.</b><br>
-        • <span class="formula">산출식: {(목표치 - 예상실적) / 과거변동성(σ)} / 2.0 × 100</span><br>
-        • 🏆 <b>한계 혁신</b>: 과거의 흐름을 완전히 벗어난 파격적 목표 수준 (지수 150%↑)<br>
-        • 🔥 <b>적극 상향</b>: 과거 성장세를 상회하는 공격적 목표 수준 (지수 80%~150%)<br>
-        • 📈 <b>소극 개선</b>: 과거의 완만한 우상향 추세를 따르는 안정적 수준 (지수 40%~80%)<br>
-        • ⚖️ <b>현상 유지</b>: 과거 실적 평균 수준의 관리 중심 목표 수준 (지수 40%↓)<br><br>
-        <b>2. 추세치 분석결과(한계)</b><br>
-        • ⚠️ <b>한계</b>: 목표치가 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.
+        <span class="guide-title">💡 분석 지표 가이드</span>
+        <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
+        • 🏆 <b>한계 혁신</b>: 과거의 흐름을 완전히 벗어난 파격적 목표 수준<br>
+        • 🔥 <b>적극 상향</b>: 과거 성장세를 상회하는 공격적 목표 수준<br>
+        • 📈 <b>소극 개선</b>: 과거의 완만한 우상향 추세를 따르는 안정적 수준<br>
+        • ⚖️ <b>현상 유지</b>: 과거 실적 평균 수준의 관리 중심 목표 수준<br><br>
+        <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
+        • ⚠️ <b>한계</b>: 목표치가 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.
     </div>
     """, unsafe_allow_html=True)
 
+    # 그래프 시각화
     st.subheader("3. 2029년 중장기 전망 및 목표 수준 시뮬레이션")
     fig, ax = plt.subplots(figsize=(11, 5))
     연도_축 = [f"'{y-2000}" for y in range(2021, 2030)]
     ax.plot(연도_축, slope * np.arange(9) + intercept, color='#CBD5E0', linestyle='--', label='중장기 추세선')
     ax.plot(연도_축[:5], Y[:5], marker='o', color='#2D6A4F', linewidth=2.5, label='과거 실적')
     ax.scatter(연도_축[5], 예상_2026, color='#D69E2E', s=200, marker='D', zorder=10, label='2026 예상')
-    for i, row in pd.DataFrame(결과_데이터).iterrows():
+    for i, row in df_res.iterrows():
         ax.scatter(연도_축[5], row['최고목표'], s=120, edgecolors='black', label=f"{row['평가방법']}")
     ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1.0, 1.0))
     st.pyplot(fig)
