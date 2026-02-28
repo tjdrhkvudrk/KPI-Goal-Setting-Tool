@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (가독성 최적화)
+# 2. CSS 디자인
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -48,7 +48,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 사이드바 (지표 기본 정보 설정)
+# 3. 사이드바
 with st.sidebar:
     st.markdown('<p class="sb-title">📌 지표명</p>', unsafe_allow_html=True)
     지표명 = st.text_input("kpi_name_input", value="지표명 입력")
@@ -94,14 +94,14 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# 실적 분석 결과 요약 (표시 필수)
+# 과거 실적 및 전망 분석 데이터 고정
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
 avg_f = round(np.mean(미래_전망), 3)
 
 st.markdown(f"""
 <div class="guide-box">
-    <span class="guide-title">📑 과거 실적 분석 데이터 (담당자 참고용)</span>
+    <span class="guide-title">📑 실적 및 전망 분석 요약 (담당자 참고)</span>
     • <b>과거 3개년 실적:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[-3])**(1/2)-1)*100, 3):.3f}%<br>
     • <b>과거 5개년 실적:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[0])**(1/4)-1)*100, 3):.3f}%<br>
     • <b>중장기 전망치:</b> 평균 {avg_f:.3f}, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3):.3f}%
@@ -111,7 +111,7 @@ st.markdown(f"""
 st.markdown("---")
 
 if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
-    # 계산 로직
+    # 분석 계산 로직
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     방법별_설정 = [
         ("목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -141,16 +141,21 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
     df_res = pd.DataFrame(결과_데이터)
     st.table(df_res.drop(columns=['raw_도전성']).style.format({col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]}))
 
-    # --- 💡 가이드 (표 바로 아래 배치) ---
+    # --- 💡 분석 지표 가이드 (복구 완료 및 고정) ---
     st.markdown("""
     <div class="guide-box">
-        <span class="guide-title">💡 [담당자 필독] 분석 결과 활용 가이드</span>
-        <b>1. 도전성 단계 분석</b>: 과거 실적의 변동성(표준편차) 대비 목표치가 얼마나 공격적으로 설정되었는지 평가합니다. (🏆한계 혁신 ~ ⚖️현상 유지)<br>
-        <b>2. 추세치 분석결과</b>: 목표치가 통계적 임계점(3-Sigma)을 넘었는지 판단합니다. (⚠️한계 시 현실적으로 달성이 매우 어려울 수 있음을 의미)
+        <span class="guide-title">💡 분석 지표 가이드</span>
+        <b>1. 도전성 단계 분석 (과거 추세 대비 상향 정도)</b><br>
+        • 🏆 <b>한계 혁신</b>: 목표치가 예상 실적보다 표준편차의 3배 이상 높은 경우로, 과거의 흐름을 완전히 벗어난 파격적 목표 수준<br>
+        • 🔥 <b>적극 상향</b>: 목표치가 과거 변동폭의 1.6배~3배 수준으로, 과거 성장세를 상회하는 공격적 목표 수준<br>
+        • 📈 <b>소극 개선</b>: 목표치가 과거 변동 범위 내에 존재하며, 과거의 완만한 우상향 추세를 따르는 안정적 수준<br>
+        • ⚖️ <b>현상 유지</b>: 목표치가 예상 실적과 유사하거나 과거 평균 수준에 머무르는 경우로, 과거 실적 평균 수준의 관리 중심 목표 수준<br><br>
+        <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
+        • ⚠️ <b>한계</b>: 목표치가 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미합니다.
     </div>
     """, unsafe_allow_html=True)
 
-    # --- 3. 중장기 전망 그래프 ---
+    # --- 3. 그래프 ---
     st.subheader("3. 2029년 중장기 전망 및 목표 수준 시뮬레이션")
     fig, ax = plt.subplots(figsize=(11, 4))
     연도_축 = [f"'{y-2000}" for y in range(2021, 2030)]
@@ -175,21 +180,19 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         
         compare_text = ""
         if alternative and alternative['평가방법'] != recom['평가방법']:
-            compare_text = f"기존의 보수적인 <b>[{alternative['평가방법']}]</b> 등 하향 시나리오도 검토하였으나, 성과 창출 의지를 부각하기 위해 <b>이보다 목표 수준이 높은 [{recom['평가방법']}]</b>을 최종 제안 모델로 채택하였습니다."
+            compare_text = f"기존의 <b>[{alternative['평가방법']}]</b> 등 보수적인 설정 방식도 검토하였으나, 성과 창출 동기 부여를 위해 <b>이보다 목표 수준이 더 높은 [{recom['평가방법']}]</b>을 최종 최적안으로 선정하였습니다."
         else:
-            compare_text = "단순 실적 유지 모델을 지양하고, 다각적 시뮬레이션을 통해 <b>가장 도전적인 수준의 목표 부여 모델</b>을 제안합니다."
+            compare_text = "다각적인 시뮬레이션을 통해 단순 개선을 넘어선 <b>가장 도전적인 수준의 목표 부여 방식</b>을 채택하였습니다."
 
         st.markdown(f"""
         <div class="recom-box">
-            <span class="guide-title" style="color:#C53030;">📌 보고서용 추천 시나리오 요약 ([{recom['평가방법']}] 기준)</span>
-            • <b>제안 목표치:</b> {recom['최고목표']:.3f} (전년 예상 실적 대비 {diff_percent}% {"상향" if 지표방향=="상향" else "하향"} 설정)<br>
-            • <b>도전성 수준:</b> {recom['도전성 단계']}<br><br>
-            <b>[보고서 작성을 위한 논리적 근거 초안 - 복사하여 활용 가능]</b><br>
-            1. <b>도전적 목표 설정의 적극성:</b> {compare_text} 이는 과거 성과에 안주하지 않고 조직 잠재 역량을 최대한 끌어내기 위한 <b>'Stretch Goal'</b> 성격의 설정입니다.<br>
-            2. <b>통계적 객관성 확보:</b> 과거 실적의 변동 패턴(표준편차)과 중장기 추세({미래_전망[-1]:.3f})를 고려할 때, <b>통계적으로 유의미한 범위 내의 최상단 목표</b>를 도출함으로써 수치의 정당성을 확보하였습니다.<br>
-            3. <b>실현 가능한 공격적 목표:</b> 역량상 임계점(3-Sigma) 이내에서 목표를 설정하여, <b>'공격적이지만 실현 가능한(Aggressive but Achievable)'</b> 최적의 목표 수준을 도출하였습니다.<br>
-            4. <b>미래 지향적 성과 견인:</b> 선제적인 목표 상향 설정을 통해 대내외에 혁신적인 성과 창출 의지를 표명하고, 조직의 지속 가능한 성장을 견인하고자 합니다.
+            <span class="guide-title" style="color:#C53030;">🎯 추천 시나리오 요약 ([{recom['평가방법']}] 적용)</span>
+            • <b>제안 목표치:</b> {recom['최고목표']:.3f} (전년 실적 대비 {diff_percent}% {"상향" if 지표방향=="상향" else "하향"} 설정)<br>
+            • <b>도전성 단계:</b> {recom['도전성 단계']}<br><br>
+            <b>[보고서 작성을 위한 논리적 근거 초안]</b><br>
+            1. <b>도전적 목표 설정의 적극성:</b> {compare_text} 이는 과거의 성과를 단순히 답습하는 것이 아니라, 잠재 역량을 최대한으로 이끌어내야 달성 가능한 <b>'Stretch Goal'</b> 성격의 수치입니다.<br>
+            2. <b>통계적 타당성 기반의 상향 설정:</b> 본 안은 과거 변동 패턴 내에서 <b>통계적으로 수용 가능한 가장 높은 수준</b>을 지향합니다. 단순히 무리한 수치를 제시하는 것이 아니라, 과거 실적의 표준편차를 정밀 분석하여 '근거 있는 상향'을 도출함으로써 목표의 정당성을 확보하였습니다.<br>
+            3. <b>실현 가능한 한계치(Boundary) 확보:</b> 역량상의 임계점(3-Sigma)을 넘지 않는 범위 내에서 최고치를 설정함으로써, <b>도전성은 극대화하되 달성 가능성은 포기하지 않는</b> 최적의 균형점을 찾았습니다.<br>
+            4. <b>미래 성장성 반영:</b> 예측 모델이 제시하는 중장기 전망치({미래_전망[-1]:.3f})보다 높은 목표 설정을 통해, 대내외에 혁신적인 성과 창출 의지를 표명하고 조직의 지속적인 성장을 견인하고자 합니다.
         </div>
         """, unsafe_allow_html=True)
-    else:
-        st.warning("⚠️ 현재 데이터 기준으로는 임계점 이내의 추천 시나리오 도출이 어렵습니다. 기초 데이터를 재검토하십시오.")
