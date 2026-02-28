@@ -65,6 +65,7 @@ with m_cols[0]:
     for i, year in enumerate(range(2021, 2026)):
         with p_cols[i]:
             st.markdown(f'<div class="sub-header">{year}</div>', unsafe_allow_html=True)
+            # 입력값 반올림 적용
             val = st.number_input(f"p_{year}", value=round(100.0 + (i*5), 3), step=0.001, format="%.3f", key=f"v_{year}")
             실적_리스트.append(val)
 
@@ -72,6 +73,7 @@ with m_cols[0]:
 with m_cols[1]:
     st.markdown('<div class="main-header bg-current">2026년 (예상)</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">실적 입력</div>', unsafe_allow_html=True)
+    # 계산값 반올림 적용
     예상_2026 = st.number_input("curr_2026", value=round(실적_리스트[-1] * 1.05, 3), step=0.001, format="%.3f", key="v_2026")
 
 # --- 미래 전망 섹션 ---
@@ -84,6 +86,7 @@ with m_cols[2]:
     for i, year in enumerate(range(2027, 2030)):
         with f_cols[i]:
             st.markdown(f'<div class="sub-header">{year}</div>', unsafe_allow_html=True)
+            # 전망치 반올림 적용
             f_val = round(slope * (6 + i) + intercept, 3)
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
@@ -131,9 +134,10 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
 
     st.subheader("2. 평가방법별 비교 분석 결과 및 임계점 진단")
     df_res = pd.DataFrame(결과_데이터)
+    # 테이블 출력 포맷 셋째자리 고정
     st.table(df_res.style.format({col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]}))
 
-    # [수정] 사용자님이 "마음에 든다"고 하셨던 원본 설명 그대로 복구
+    # 가이드 설명 (사용자 원본 유지)
     st.markdown("""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
@@ -158,5 +162,3 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
         ax.scatter(연도_축[5], row['최고목표'], s=120, edgecolors='black', label=f"{row['평가방법']}")
     ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1.0, 1.0))
     st.pyplot(fig)
-
-
