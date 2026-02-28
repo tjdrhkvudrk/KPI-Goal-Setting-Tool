@@ -61,7 +61,7 @@ with st.sidebar:
 
 st.title("📊 성과지표 목표 설정 및 중장기 전망 시뮬레이터")
 
-# 1. 과거 실적 및 중장기 전망 섹션
+# 1. 과거 실적 및 전망 데이터 수집
 st.subheader("1. 과거 5개년 및 2026년 실적 기반 중장기 실적 전망")
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
@@ -98,7 +98,7 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# 1번 섹션 하단 통계 가이드 (복구 완료)
+# 통계 가이드 박스
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
 전망_데이터 = [예상_2026] + 미래_전망
@@ -119,7 +119,7 @@ st.markdown(f"""
 
 st.markdown("---")
 
-if st.button("🚀 전체 분석 및 시뮬레이션 실행"):
+if st.button("🚀 시뮬레이션 및 분석 실행"):
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     
     방법별 = [
@@ -138,8 +138,7 @@ if st.button("🚀 전체 분석 및 시뮬레이션 실행"):
         최저 = round(기준치 * 0.8 if 지표방향=="상향" else 기준치 * 1.2, 3)
         denom = (최고 - 최저) if (최고 - 최저) != 0 else 1
         평점 = round(max(20.0, min(100.0, 20 + 80 * ((예상_2026 - 최저) / denom))), 3)
-        zp = (최고 - 예상_2026) / 오차 if 지표방향=="상향" else (예상_2026 - 최고) / 오차
-        도전성_지수 = round((zp / 2.0) * 100, 3)
+        도전성_지수 = round((((최고 - 예상_2026) / 오차 if 지표방향=="상향" else (예상_2026 - 최고) / 오차) / 2.0) * 100, 3)
         단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지"
         판정 = "✅ 유지" if (abs(최고 - 기준치) <= (3 * std3) and abs(최고/기준치 - 1) <= 0.3) else "⚠️ 한계"
         결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
@@ -166,7 +165,7 @@ if st.button("🚀 전체 분석 및 시뮬레이션 실행"):
     """
     st.markdown(html_table, unsafe_allow_html=True)
 
-    # [완벽 복구] 사용자 요청 가이드 내용
+    # 💡 완벽한 가이드 박스
     st.markdown(f"""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
@@ -184,35 +183,53 @@ if st.button("🚀 전체 분석 및 시뮬레이션 실행"):
     </div>
     """, unsafe_allow_html=True)
 
-    # 3. 그래프
+    # 3. 그래프 - 연도 순서 교정 (21 -> 29)
     st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
-    years_all = [f"'{y-2000}" for y in range(2021, 2030)]
-    years_past = years_all[:6]
-    years_future = years_all[5:]
-    idx_future = np.arange(6, 10)
+    
+    # x축 레이블 전체 생성 (순서대로)
+    years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
+    
+    # 미래 데이터 계산
+    idx_future = np.arange(6, 10) # 2027~2029 (2026 포함 연계)
     base_trend = slope_f * idx_future + intercept_f
     line_challenge = [예상_2026] + list(base_trend[1:] + (std5 * 1.5 if 지표방향=="상향" else -std5 * 1.5))
     line_maintain = [예상_2026] + list(base_trend[1:])
     line_conservative = [예상_2026] + list(base_trend[1:] - (std5 * 1.0 if 지표방향=="상향" else -std5 * 1.0))
 
     fig, ax = plt.subplots(figsize=(13, 6.5))
-    ax.plot(years_future, line_challenge, color='#3182CE', linestyle='--', linewidth=2, label='도전 시나리오', zorder=2)
-    ax.plot(years_future, line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오', zorder=2)
-    ax.plot(years_future, line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오', zorder=2)
+    
+    # 1. 과거 실적 먼저 그리기 (21~26)
+    ax.plot(years_all_label[:6], Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=20)
+    
+    # 2. 2026년 기준점 표시
+    ax.scatter(years_all_label[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=25)
+    
+    # 3. 미래 시나리오 그리기 (26~29)
+    ax.plot(years_all_label[5:], line_challenge, color='#3182CE', linestyle='--', linewidth=2, label='도전 시나리오', zorder=2)
+    ax.plot(years_all_label[5:], line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오', zorder=2)
+    ax.plot(years_all_label[5:], line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오', zorder=2)
+    
+    # 4. 목표부여 점들 찍기
     for row in 결과_데이터:
         if row['구분'] == "목표부여":
-            ax.scatter(years_all[5], row['최고목표'], s=120, zorder=12, edgecolors='white', linewidth=1, label=f"{row['평가방법']}")
-    ax.scatter(years_all[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=25)
-    ax.plot(years_past, Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=20)
-    ax.fill_between(years_future, line_conservative, line_challenge, color='#EBF8FF', alpha=0.3)
-    ax.plot(years_all, slope_f * np.arange(9) + intercept_f, color='#EDF2F7', linestyle=':', zorder=1)
+            ax.scatter(years_all_label[5], row['최고목표'], s=120, zorder=12, edgecolors='white', linewidth=1, label=f"{row['평가방법']}")
 
+    ax.fill_between(years_all_label[5:], line_conservative, line_challenge, color='#EBF8FF', alpha=0.3)
+    ax.plot(years_all_label, slope_f * np.arange(9) + intercept_f, color='#EDF2F7', linestyle=':', zorder=1)
+
+    # 범례 및 그리드 설정
     handles, labels = ax.get_legend_handles_labels()
     try:
-        past_idx = labels.index("과거 5개년 실적")
-        new_order = [past_idx] + [i for i, l in enumerate(labels) if i != past_idx]
-        ax.legend([handles[i] for i in new_order], [labels[i] for i in new_order], prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
+        # 중복 제거 및 "과거 5개년 실적" 최상단 배치
+        unique_labels = dict(zip(labels, handles))
+        sorted_labels = ["과거 5개년 실적", "2026 예상(기준점)", "도전 시나리오", "유지 시나리오", "보수 시나리오"]
+        other_labels = [l for l in unique_labels.keys() if l not in sorted_labels]
+        final_order = sorted_labels + other_labels
+        
+        ax.legend([unique_labels[l] for l in final_order], final_order, prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
     except:
         ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1))
+        
+    ax.set_xticks(years_all_label) # x축 순서 고정
     ax.grid(axis='y', linestyle='-', alpha=0.1)
     st.pyplot(fig)
