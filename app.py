@@ -17,17 +17,18 @@ st.sidebar.header("📍 지표 기본 설정")
 indicator_name = st.sidebar.text_input("지표명", value="주요사업 성과지표")
 weight = st.sidebar.number_input("가중치", value=5.0)
 direction = st.sidebar.selectbox("지표 방향", ["상향", "하향"])
-long_term_goal = st.sidebar.number_input("중장기 목표(Y+3)", value=160.0)
+# 중장기 목표도 소수점 셋째 자리까지 입력 가능하도록 설정
+long_term_goal = st.sidebar.number_input("중장기 목표(Y+3)", value=160.000, format="%.3f", step=0.001)
 
-# 메인화면: 실적 입력
+# 메인화면: 실적 입력 (소수점 셋째 자리 설정 추가)
 st.subheader("1. 실적 데이터 입력")
 col1, col2, col3, col4, col5, col6 = st.columns(6)
-with col1: y5 = st.number_input("Y-5 실적", value=100.0)
-with col2: y4 = st.number_input("Y-4 실적", value=105.0)
-with col3: y3 = st.number_input("Y-3 실적", value=110.0)
-with col4: y2 = st.number_input("Y-2 실적", value=115.0)
-with col5: y1 = st.number_input("Y-1 실적", value=120.0)
-with col6: est = st.number_input("당해 예상실적", value=130.0)
+with col1: y5 = st.number_input("Y-5 실적", value=100.000, format="%.3f", step=0.001)
+with col2: y4 = st.number_input("Y-4 실적", value=105.000, format="%.3f", step=0.001)
+with col3: y3 = st.number_input("Y-3 실적", value=110.000, format="%.3f", step=0.001)
+with col4: y2 = st.number_input("Y-2 실적", value=115.000, format="%.3f", step=0.001)
+with col5: y1 = st.number_input("Y-1 실적", value=120.000, format="%.3f", step=0.001)
+with col6: est = st.number_input("당해 예상실적", value=130.000, format="%.3f", step=0.001)
 
 hist = [y5, y4, y3, y2, y1]
 
@@ -56,9 +57,12 @@ if st.button("🚀 모든 방법론 통합 분석 실행"):
     results = []
     for m_name, hi, lo in methods:
         if direction == "하향": hi, lo = lo, hi
-        score = max(20.0, min(100.0, 20 + 80 * (est - lo) / (hi - lo)))
-        stretch = abs(hi - base) / base * 100
-        results.append({"방법론": m_name, "최고목표(S)": round(hi, 2), "도전성(%)": round(stretch, 1), "예상평점": round(score, 2)})
+        # 평점 계산 시 분모가 0이 되는 것 방지
+        denom = (hi - lo) if (hi - lo) != 0 else 1
+        score = max(20.0, min(100.0, 20 + 80 * (est - lo) / denom))
+        stretch = abs(hi - base) / base * 100 if base != 0 else 0
+        # 결과를 소수점 셋째 자리까지 반올림(round 3)
+        results.append({"방법론": m_name, "최고목표(S)": round(hi, 3), "도전성(%)": round(stretch, 1), "예상평점": round(score, 2)})
     
     df = pd.DataFrame(results)
     
@@ -70,12 +74,13 @@ if st.button("🚀 모든 방법론 통합 분석 실행"):
     
     # 결과 출력
     st.subheader("2. 방법론별 비교 분석 결과")
-    st.dataframe(df.style.highlight_max(axis=0, subset=['예상평점']))
+    # 표에서도 셋째 자리까지 보이도록 포맷팅
+    st.dataframe(df.style.format({"최고목표(S)": "{:.3f}"}).highlight_max(axis=0, subset=['예상평점']))
 
     # 시각화
     fig, ax = plt.subplots(figsize=(10, 4))
     ax.bar(df['방법론'], df['최고목표(S)'], color='skyblue')
-    ax.axhline(base, color='red', linestyle='--', label=f'기준치({base:.2f})')
+    ax.axhline(base, color='red', linestyle='--', label=f'기준치({base:.3f})')
     ax.set_title("방법론별 S등급 목표치 비교")
     plt.xticks(rotation=45)
     st.pyplot(fig)
