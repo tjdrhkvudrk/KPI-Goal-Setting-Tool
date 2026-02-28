@@ -73,7 +73,7 @@ with m_cols[0]:
             val = st.number_input(f"p_{year}", value=round(100.0 + (i*5), 3), step=0.001, format="%.3f", key=f"v_{year}")
             실적_리스트.append(val)
 
-# [추가] 2026년 예상치 자동 제안 (과거 5개년 추세 기반)
+# [수정 불가 포인트] 2026년 예상치 자동 제안 (사용자 수정 가능)
 X_past = np.arange(5)
 Y_past = np.array(실적_리스트)
 slope_p, intercept_p = np.polyfit(X_past, Y_past, 1)
@@ -97,7 +97,7 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# [원본 복구] 실적 분석 참고내용
+# [원본 유지] 실적 분석 참고내용
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
 avg_f = round(np.mean(미래_전망), 3)
@@ -114,7 +114,6 @@ st.markdown(f"""
 st.markdown("---")
 
 if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
-    # [추가] 하향 지표 대응 기준치
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     
     방법별 = [
@@ -139,9 +138,9 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
         판정 = "⚠️ 한계" if (abs(최고 - 기준치) > (3 * std3) or abs(최고/기준치 - 1) > 0.3) else "✅ 유지"
         결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
+    # [수정 불가 포인트] 2번 제목 및 표 구성 유지
     st.subheader("2. 평가방법별 목표 도전성 비교")
     
-    # [추가] 엑셀 저장 버튼
     df_export = pd.DataFrame(결과_데이터)
     csv = df_export.to_csv(index=False).encode('utf-8-sig')
     st.download_button("📥 분석 결과 Excel(CSV)로 저장", csv, f"{지표방향}_{지표명}_분석결과.csv", "text/csv")
@@ -166,7 +165,7 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     """
     st.markdown(html_table, unsafe_allow_html=True)
 
-    # [완벽 복구] 가이드 섹션
+    # [완벽 복구 가이드]
     st.markdown(f"""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
@@ -184,16 +183,56 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     </div>
     """, unsafe_allow_html=True)
 
-    # 3. 그래프
-    st.subheader("3. 2029년 중장기 전망 및 목표 시나리오 시뮬레이션")
-    fig, ax = plt.subplots(figsize=(11, 5))
-    연도_축 = [f"'{y-2000}" for y in range(2021, 2030)]
-    ax.plot(연도_축, slope_f * np.arange(9) + intercept_f, color='#CBD5E0', linestyle='--', label='중장기 추세선')
-    ax.plot(연도_축[:5], Y_full[:5], marker='o', color='#2D6A4F', linewidth=2.5, label='과거 실적')
-    ax.scatter(연도_축[5], 예상_2026, color='#D69E2E', s=200, marker='D', zorder=10, label='2026 예상')
-    for i, row in enumerate(결과_데이터):
-        ax.scatter(연도_축[5], row['최고목표'], s=120, edgecolors='black', label=f"{row['평가방법']}")
-    ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1.0, 1.0))
+    # --- [업데이트] 3. 그래프 (시나리오 궤적 통합 시각화) ---
+    st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
+    
+    # 데이터 매핑
+    years_all = [f"'{y-2000}" for y in range(2021, 2030)]
+    years_past = years_all[:6]   # '21~'26
+    years_future = years_all[5:]  # '26~'29
+    
+    # 시나리오 미래 궤적 계산 (2026~2029)
+    idx_future = np.arange(6, 10)
+    base_trend = slope_f * idx_future + intercept_f
+    
+    # 궤적별 리스트 생성 (2026 예상치에서 분기)
+    line_challenge = [예상_2026] + list(base_trend[1:] + (std5 * 1.5 if 지표방향=="상향" else -std5 * 1.5))
+    line_maintain = [예상_2026] + list(base_trend[1:])
+    line_conservative = [예상_2026] + list(base_trend[1:] - (std5 * 1.0 if 지표방향=="상향" else -std5 * 1.0))
+
+    fig, ax = plt.subplots(figsize=(13, 6.5))
+    
+    # 1. 배경 추세선 (전체 구간)
+    ax.plot(years_all, slope_f * np.arange(9) + intercept_f, color='#EDF2F7', linestyle=':', label='기본 추세선(Base)', zorder=1)
+    
+    # 2. 과거 실적 및 예상 (굵은 실선)
+    ax.plot(years_past, Y_full, marker='o', color='#2D3748', linewidth=3.5, label=f"과거 실적 및 '26 예상", zorder=5)
+
+    # 3. 미래 시나리오 궤적 (점선 및 마커)
+    ax.plot(years_future, line_challenge, color='#3182CE', linestyle='--', linewidth=2, marker='^', markersize=8, label='도전 시나리오')
+    ax.plot(years_future, line_maintain, color='#718096', linestyle='--', linewidth=2, marker='s', markersize=7, label='유지 시나리오')
+    ax.plot(years_future, line_conservative, color='#D69E2E', linestyle='--', linewidth=2, marker='v', markersize=8, label='보수 시나리오')
+    
+    # 미래 범위 강조 채우기
+    ax.fill_between(years_future, line_conservative, line_challenge, color='#EBF8FF', alpha=0.3)
+
+    # 4. 목표부여(통계모델) 2026년 포인트들 (비교용 이정표)
+    for row in 결과_데이터:
+        if row['구분'] == "목표부여":
+            ax.scatter(years_all[5], row['최고목표'], s=150, zorder=10, 
+                       edgecolors='white', linewidth=2, label=f"Ref: {row['평가방법']}")
+
+    # 디자인 마무리
+    ax.set_title(f"[{지표명}] 중장기 목표 시나리오 시뮬레이션", pad=20, fontproperties=font_prop, fontsize=16)
+    ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
+    ax.grid(axis='y', linestyle='-', alpha=0.1)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    # Y축 범위 최적화
+    all_vals = list(Y_full) + line_challenge + line_conservative
+    ax.set_ylim(min(all_vals)*0.9, max(all_vals)*1.1)
+
     st.pyplot(fig)
 
     # 4. 최종 보고 가이드
