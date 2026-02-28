@@ -32,7 +32,7 @@ st.set_page_config(page_title="경영평가 시뮬레이터", layout="wide")
 현재_연도 = 2026
 과거_연도_리스트 = [현재_연도 - i for i in range(5, 0, -1)]
 
-# 표 디자인 통합 CSS (가운데 정렬 및 헤더 강조)
+# 표 디자인 통합 CSS
 st.markdown("""
 <style>
     th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
@@ -57,7 +57,6 @@ for i, 연도 in enumerate(과거_연도_리스트):
         값 = st.number_input(f"{연도}년 실적", value=100.0 + (i*5), format="%.3f", key=f"실적_{i}")
         실적_리스트.append(값)
 
-# 기초 통계 계산
 삼개년_평균 = np.mean(실적_리스트[-3:])
 직전년도_실적 = 실적_리스트[-1]
 표준편차_값 = np.std(실적_리스트)
@@ -66,7 +65,6 @@ for i, 연도 in enumerate(과거_연도_리스트):
 st.markdown("##### [실적 요약 및 기준치 산정]")
 예상실적_입력 = st.number_input("🎯 2026년 최종 예상실적 확정", value=기준치 * 1.05, format="%.3f")
 
-# 1번 표 출력 (숫자 컬럼만 포맷 적용하여 에러 방지)
 summary_df = pd.DataFrame({
     "3개년 평균": [삼개년_평균],
     "직전년도 실적": [직전년도_실적],
@@ -99,43 +97,37 @@ if st.button("🚀 통합 성과 분석 실행"):
         평점 = max(20.0, min(100.0, 20 + 80 * ((예상실적_입력 - 최저) / (최고 - 최저))))
         득점 = 평점 * (가중치_값 / 100.0)
         
-        # 도전성 계산
         지수 = (최고 - 추세치) / 오차 if 상향_여부 else (추세치 - 최고) / 오차
         도전성_지수 = (지수 / 2.0) * 100
         단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지" if 도전성_지수 >= 0 else "⚠️ 하향 설정"
         
         결과_리스트.append({
-            "평가방법": 명칭,
-            "3개년 평균": 삼개년_평균,
-            "직전년 실적": 직전년도_실적,
-            "기준치": 기준치,
-            "최저목표": 최저,
-            "최고목표": 최고,
-            "예상평점": 평점,
-            "가중치": 가중치_값,
-            "예상득점": 득점,
-            "도전성 단계": 단계
+            "평가방법": 명칭, "3개년 평균": 삼개년_평균, "직전년 실적": 직전년도_실적, "기준치": 기준치,
+            "최저목표": 최저, "최고목표": 최고, "예상평점": 평점, "가중치": 가중치_값, "예상득점": 득점, "도전성 단계": 단계
         })
 
-    # 2번 표 출력
     st.subheader("2. 평가방법별 비교 분석 결과")
     df_res = pd.DataFrame(결과_리스트)
-    
-    # 숫자 열만 골라서 포맷팅 (에러 방지 핵심)
     num_cols = ["3개년 평균", "직전년 실적", "기준치", "최저목표", "최고목표", "예상평점", "가중치", "예상득점"]
     st.table(df_res.style.format({c: "{:.3f}" for c in num_cols if c not in ["예상평점", "가중치"]}).format({"예상평점": "{:.2f}", "가중치": "{:.2f}"}))
 
-    # 줄표 제거된 깔끔한 설명 박스
+    # [요청사항 반영] 단계별 설명 한 줄 배치 및 여백 강화
     st.markdown("""
-    <div style="background-color: #e9ecef; padding: 15px; border-radius: 10px; border-left: 5px solid #4A5568;">
-        <strong>💡 도전성 단계 기준 안내</strong><br>
-        최고목표가 과거 추세 대비 얼마나 도전적인지 나타내는 지표입니다.<br>
-        • <strong>150% 이상</strong>: 🏆 한계 혁신 | • <strong>80% ~ 150%</strong>: 🔥 적극 상향<br>
-        • <strong>40% ~ 80%</strong>: 📈 소극 개선 | • <strong>0% ~ 40%</strong>: ⚖️ 현상 유지
+    <div style="background-color: #f8f9fa; padding: 18px; border-radius: 10px; border: 1px solid #dee2e6; margin-top: 10px;">
+        <p style="margin-bottom: 10px; font-weight: bold; color: #2d3748;">🔍 도전성 단계(zp) 판정 기준</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+            <span style="flex: 1; text-align: center;"><strong>🏆 한계 혁신</strong> : 150% 이상</span>
+            <span style="color: #cbd5e0;"> | </span>
+            <span style="flex: 1; text-align: center; margin-left: 10px;"><strong>🔥 적극 상향</strong> : 80% ~ 150%</span>
+            <span style="color: #cbd5e0;"> | </span>
+            <span style="flex: 1; text-align: center; margin-left: 10px;"><strong>📈 소극 개선</strong> : 40% ~ 80%</span>
+            <span style="color: #cbd5e0;"> | </span>
+            <span style="flex: 1; text-align: center; margin-left: 10px;"><strong>⚖️ 현상 유지</strong> : 0% ~ 40%</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 3. 그래프 (범례 우측 배치)
+    # 3. 그래프
     st.subheader("3. 목표 대비 성과 위치 시각화")
     fig, ax = plt.subplots(figsize=(10, 4.5))
     연도_라벨 = [f"{y}년" for y in 과거_연도_리스트] + ["26년(예)"]
@@ -143,11 +135,9 @@ if st.button("🚀 통합 성과 분석 실행"):
     
     ax.plot(연도_라벨[:-1], 실적_리스트, marker='o', color='#2c3e50', linewidth=3, label='과거 실적')
     ax.plot(연도_라벨[-2:], 전체_실적[-2:], marker='D', markersize=10, color='#e74c3c', linestyle='--', linewidth=2, label='26년 예상')
-
     colors = ['#1abc9c', '#3498db', '#9b59b6', '#f39c12']
     for i, row in df_res.iterrows():
         ax.scatter("26년(예)", row['최고목표'], color=colors[i], s=180, edgecolors='white', zorder=5, label=f"{row['평가방법']} ({row['최고목표']:.2f})")
-
     ax.axhline(기준치, color='#bdc3c7', linestyle=':', label=f'기준치 ({기준치:.2f})')
     ax.legend(prop=font_prop, loc='center left', bbox_to_anchor=(1.02, 0.5), frameon=False)
     plt.tight_layout()
