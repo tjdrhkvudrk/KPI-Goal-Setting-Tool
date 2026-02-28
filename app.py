@@ -1,98 +1,133 @@
-import ipywidgets as widgets
-from IPython.display import display, HTML, clear_output
+import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
+from scipy import stats
+import io
 
-# 1. 화면 스타일 및 서식
-style = {'description_width': '150px'}
-layout = widgets.Layout(width='500px')
+# 1. 화면 스타일 및 서식 설정
+st.set_page_config(page_title="KPI 목표 시뮬레이터", layout="wide")
+st.title("🎯 도전적 목표 설정 및 평점 통합 시뮬레이터")
 
-# 2. 입력 위젯 구성
-title = widgets.HTML("<h2>🎯 도전적 목표 설정 및 평점 시뮬레이터</h2>")
-indicator_name = widgets.Text(description="지표명:", value="주요사업 성과지표", style=style, layout=layout)
-weight = widgets.FloatText(description="가중치:", value=5.0, style=style)
-direction = widgets.Dropdown(description="지표 방향:", options=['상향', '하향'], value='상향', style=style)
+# 2. 입력부 (사이드바)
+with st.sidebar:
+    st.header("1. 지표 기본정보 및 도전성")
+    biz_name = st.text_input("사업명", value="인체조직 생산사업")
+    ind_name = st.text_input("지표명", value="기증자당 혈관 채취 실적")
+    weight = st.number_input("가중치", value=5.0)
+    direction = st.selectbox("지표 방향", ["상향", "하향", "일반(비대상)"])
+    
+    # ipywidgets의 stretch_rate 로직 반영
+    stretch_rate = st.slider("목표 도전율(%)", 0.0, 20.0, 2.0, help="기준치에 추가할 도전적 가산율입니다.")
+    
+    st.header("2. 과거 실적 및 예상치")
+    hist_years = [2021, 2022, 2023, 2024, 2025]
+    y_vals = []
+    for i, year in enumerate(hist_years):
+        # ipywidgets의 초기값 로직(100 + i*5) 유지
+        val = st.number_input(f"{year}년 실적(Y-{5-i})", value=100.0 + (i*5), format="%.3f")
+        y_vals.append(val)
+    
+    current_estimated = st.number_input("당해 예상실적", value=float(y_vals[-1]*1.05))
 
-# 도전성 조절 슬라이더 (기준치 대비 목표를 얼마나 더 높게 잡을 것인가)
-stretch_rate = widgets.FloatSlider(description="목표 도전율(%):", min=0, max=20, step=0.5, value=2.0, 
-                                   style=style, layout=layout, help="기준치에 추가할 도전적 가산율입니다.")
+# 3. 핵심 계산 엔진
+Y = np.array(y_vals)
+X = np.arange(1, 6)
+last_3_avg = np.mean(Y[-3:])
+std_dev = np.std(Y, ddof=1)
+stretch = stretch_rate / 100
 
-# 과거 실적 입력 (5개년)
-history_widgets = [widgets.FloatText(description=f"Y-{i} 실적:", value=100.0 + (5-i)*5, style=style) for i in range(5, 0, -1)]
-current_estimated = widgets.FloatText(description="당해 예상실적:", value=125.0, style=style)
+# [기초 기준치 및 도전적 기준치 산정]
+if direction == "상향":
+    raw_base = max(Y[-1], last_3_avg)
+    challenged_base = raw_base * (1 + stretch)
+elif direction == "하향":
+    raw_base = min(Y[-1], last_3_avg)
+    challenged_base = raw_base * (1 - stretch)
+else:
+    raw_base = Y[-1]
+    challenged_base = raw_base
 
-calc_button = widgets.Button(description="도전적 목표 시뮬레이션 실행", button_style='danger', layout={'width': '300px'})
-output = widgets.Output()
+# 4. 7대 평가방법 자동 산출
+slope, intercept, _, _, _ = stats.linregress(X, Y)
+trend_2026 = intercept + slope * 6
 
-# 3. 계산 및 시뮬레이션 함수
-def run_simulation(_):
-    with output:
-        clear_output()
-        
-        # 값 추출
-        name = indicator_name.value
-        w = weight.value
-        direct = direction.value
-        stretch = stretch_rate.value / 100  # 퍼센트를 소수로 변환
-        hist_vals = [wd.value for wd in history_widgets]
-        est = current_estimated.value
-        
-        # 기본 통계량
-        last_3_avg = sum(hist_vals[-3:]) / 3
-        std_dev = np.std(hist_vals)
-        
-        # 1. 기초 기준치 산정
-        if direct == "상향":
-            raw_base = max(hist_vals[-1], last_3_avg)
-            # 도전성 부여: 기준치 자체를 stretch만큼 상향 조정
-            challenged_base = raw_base * (1 + stretch)
-        else:
-            raw_base = min(hist_vals[-1], last_3_avg)
-            # 하향지표는 기준치를 stretch만큼 더 낮게 잡아야 도전적임
-            challenged_base = raw_base * (1 - stretch)
-            
-        # 평점 계산 함수
-        def calc_score(actual, hi, lo):
-            if hi == lo: return 20.0
-            s = 20 + 80 * (actual - lo) / (hi - lo)
-            return max(20.0, min(100.0, s))
+methods = {
+    "목표부여(2편차)": challenged_base + (2 * std_dev if direction == "상향" else -2 * std_dev),
+    "목표부여(1편차)": challenged_base + (1 * std_dev if direction == "상향" else -1 * std_dev),
+    "목표부여(120%)": challenged_base * (1.2 if direction == "상향" else 0.8),
+    "목표부여(110%)": challenged_base * (1.1 if direction == "상향" else 0.9),
+    "중장기 목표부여": challenged_base * 1.15, # 로드맵 가정치
+    "글로벌 실적비교": challenged_base * 1.12, # 우수기관 평균 가정치
+    "추세치 평가": trend_2026
+}
 
-        # [방법 A] 일반 방식 (기준치 대비 +/- 20% 폭)
-        hi_gen, lo_gen = (challenged_base * 1.2, challenged_base * 0.8) if direct == "상향" else (challenged_base * 0.8, challenged_base * 1.2)
-        score_gen = calc_score(est, hi_gen, lo_gen)
-        
-        # [방법 B] 편차 방식 (기준치 대비 +/- 2*std_dev)
-        hi_dev, lo_dev = (challenged_base + 2*std_dev, challenged_base - 2*std_dev) if direct == "상향" else (challenged_base - 2*std_dev, challenged_base + 2*std_dev)
-        score_dev = calc_score(est, hi_dev, lo_dev)
-        
-        # 결과 표시
-        display(HTML(f"<h3>📊 '{name}' 시뮬레이션 결과 (도전율 {stretch*100}%)</h3>"))
-        display(HTML(f"<b>순수 기준치:</b> {raw_base:.2f} ➔ <b>도전적 기준치:</b> <span style='color:red'>{challenged_base:.2f}</span>"))
-        
-        res_df = pd.DataFrame({
-            "항목": ["최고목표(S등급)", "최저목표(E등급)", "예상평점", "예상득점"],
-            "일반 목표부여": [f"{hi_gen:.2f}", f"{lo_gen:.2f}", f"{score_gen:.2f}점", f"{score_gen*w/100:.3f}점"],
-            "목표부여(편차)": [f"{hi_dev:.2f}", f"{lo_dev:.2f}", f"{score_dev:.2f}점", f"{score_dev*w/100:.3f}점"]
-        })
-        display(res_df)
-        
-        # 전략적 조언
-        gap = abs(score_gen - score_dev)
-        better = "편차 방식" if score_dev > score_gen else "일반 방식"
-        display(HTML(f"<div style='border:1px solid #ddd; padding:10px; background:#f9f9f9;'>"
-                     f"💡 <b>전략 조언:</b> 도전성을 {stretch*100}% 부여했을 때, <b>{better}</b>이 약 {gap:.2f}점 더 유리합니다.<br>"
-                     f"목표가 도전적일수록 표준편차가 큰 지표는 '편차 방식'이 평점 방어에 유리할 수 있습니다.</div>"))
+# 5. 결과 레이아웃 구성
+col_main, col_side = st.columns([3, 1])
 
-# 이벤트 연결 및 배치
-calc_button.on_click(run_simulation)
-ui = widgets.VBox([
-    title,
-    widgets.HTML("<b>1. 지표 기본정보 및 도전성 설정</b>"),
-    indicator_name, widgets.HBox([weight, direction, stretch_rate]),
-    widgets.HTML("<br><b>2. 과거 실적 및 올해 예상치</b>"),
-    widgets.HBox(history_widgets[:3]), widgets.HBox(history_widgets[3:] + [current_estimated]),
-    widgets.HTML("<br>"),
-    calc_button
-])
+with col_main:
+    st.subheader(f"📊 '{ind_name}' 시뮬레이션 결과 (도전율 {stretch_rate}%)")
+    st.write(f"**순수 기준치:** {raw_base:.3f} ➔ **도전적 기준치:** :red[{challenged_base:.3f}]")
+    
+    # 평가방법별 목표치 표
+    res_df = pd.DataFrame({
+        "평가방법": methods.keys(),
+        "산출 목표치": methods.values(),
+        "도전성 성격": ["최상위(2σ) 도전", "상위(1σ) 도전", "정책적 상향(강)", "정책적 상향(약)", "로드맵 기반", "세계 수준", "통계적 추세"]
+    })
+    st.table(res_df.style.format({"산출 목표치": "{:.3f}"}))
 
-display(ui, output)
+    # 시각화
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=hist_years, y=Y, name="과거 실적", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=[2026], y=[methods["목표부여(2편차)"]], name="최고목표(2σ)", marker=dict(size=12, color='red', symbol='star')))
+    st.plotly_chart(fig, use_container_width=True)
+
+with col_side:
+    st.subheader("🚩 도전성 5단계 범주")
+    st.markdown("""
+    | 단계 | 명칭 | 범위 |
+    | :--- | :--- | :--- |
+    | <span style='color:green'>5</span> | **한계 혁신** | 100%↑ |
+    | <span style='color:blue'>4</span> | **적극 상향** | 50%↑ |
+    | <span style='color:orange'>3</span> | **소극 개선** | 25%↑ |
+    | <span style='color:gray'>2</span> | **현상 유지** | 0%↑ |
+    | <span style='color:red'>1</span> | **하향 설정** | 0%↓ |
+    """, unsafe_allow_html=True)
+    
+    # zp 기반 도전성 판정
+    s_resid = np.sqrt(np.sum((Y - (intercept + slope * X))**2) / 3)
+    S_val = max(s_resid * np.sqrt(1 + (1/5) + (9/10)), 0.0001)
+    zp = (methods["목표부여(2편차)"] - trend_2026) / S_val if direction == "상향" else (trend_2026 - methods["목표부여(2편차)"]) / S_val
+    score = (zp / 2.0) * 100
+
+    if score >= 100: status, color = "🏆 한계 혁신", "green"
+    elif score >= 50: status, color = "🔥 적극 상향", "blue"
+    elif score >= 25: status, color = "📈 소극 개선", "orange"
+    elif score >= 0: status, color = "⚖️ 현상 유지", "gray"
+    else: status, color = "⚠️ 하향 설정", "red"
+    
+    st.divider()
+    st.write("### 내 도전성 등급")
+    st.title(f":{color}[{status.split()[-1]}]")
+    st.metric("도전성 지수", f"{score:.1f}%")
+
+# 6. 상세 결과표 및 다운로드 (이미지 91881c 양식 반영)
+st.divider()
+st.subheader("📅 경영평가 상세 시뮬레이션 결과표")
+goal_hi = methods["목표부여(2편차)"]
+goal_lo = challenged_base - (2 * std_dev if direction == "상향" else -2 * std_dev)
+est_score = np.clip(20 + 80 * ((current_estimated - goal_lo) / (goal_hi - goal_lo)), 20, 100) if direction == "상향" else 100.0
+
+final_df = pd.DataFrame({
+    "사업명": [biz_name], "지표명": [ind_name], "지표성격": [direction],
+    "기준치": [f"{challenged_base:.3f}"], "최고목표": [f"{goal_hi:.3f}"], "최저목표": [f"{goal_lo:.3f}"],
+    "예상평점": [f"{est_score:.2f}"], "예상득점": [f"{(est_score*weight/100):.3f}"]
+})
+st.dataframe(final_df, use_container_width=True)
+
+# 엑셀 다운로드
+output = io.BytesIO()
+with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    final_df.to_excel(writer, index=False)
+st.download_button("📥 시뮬레이션 결과 엑셀 다운로드", output.getvalue(), "KPI_Result.xlsx")
