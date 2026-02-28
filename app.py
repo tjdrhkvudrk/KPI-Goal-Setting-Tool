@@ -27,87 +27,83 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. 페이지 설정 및 CSS 디자인
+# 2. 페이지 설정 및 통합 디자인 CSS
 st.set_page_config(page_title="경영평가 시뮬레이터", layout="wide")
 
 st.markdown("""
 <style>
-    /* 테이블 헤더 및 셀 디자인 */
-    th { background-color: #4A5568 !important; color: white !important; text-align: center !important; font-size: 15px !important; }
-    td { text-align: center !important; vertical-align: middle !important; font-size: 15px !important; }
-    
-    /* 과거 실적 입력란(작게) */
-    div[data-testid="column"]:nth-child(-n+5) input {
-        font-size: 14px !important;
-        height: 35px !important;
+    /* 전체 표 디자인 통일 (이미지 8e4778 디자인 계승) */
+    th { background-color: #4A5568 !important; color: white !important; text-align: center !important; font-size: 15px !important; border: 1px solid #dee2e6 !important; }
+    td { text-align: center !important; vertical-align: middle !important; font-size: 15px !important; border: 1px solid #dee2e6 !important; }
+
+    /* 입력용 커스텀 표 디자인 (헤더 색상 변경) */
+    .input-table-header { background-color: #2D3748 !important; } 
+
+    /* 입력 위젯 스타일 조정: 표 내부 셀처럼 보이도록 구성 */
+    div[data-testid="stNumberInput"] { margin-bottom: 0px !important; }
+    div[data-testid="stNumberInput"] label { display: none !important; } /* 라벨 숨김 (표 헤더가 대신함) */
+    div[data-testid="stNumberInput"] input {
+        border: none !important;
+        text-align: center !important;
+        font-size: 15px !important;
+        background-color: transparent !important;
     }
-    div[data-testid="column"]:nth-child(-n+5) label p {
-        font-size: 13px !important;
-        font-weight: normal !important;
-    }
-    
-    /* 2026년 예상 실적 입력란 (강조색상) */
-    div[data-testid="column"]:nth-child(6) input {
-        background-color: #EBF8FF !important; /* 연한 파란색 */
-        border: 2px solid #3182CE !important;
-        font-size: 18px !important;
-        font-weight: bold !important;
-        height: 45px !important;
-    }
-    div[data-testid="column"]:nth-child(6) label p {
-        font-size: 16px !important;
-        font-weight: bold !important;
-        color: #2B6CB0 !important;
-    }
+
+    /* 2026년 예상 실적 강조 셀 (연한 배경색) */
+    .highlight-cell { background-color: #F7FAFC !important; border: 2px solid #E2E8F0 !important; }
+    .highlight-cell input { font-weight: bold !important; color: #2B6CB0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("⚖️ 경영평가 계량지표 통합 시뮬레이터")
 
-# 3. 실적 데이터 입력 (한 줄 배치)
+# 3. 사이드바 설정
 st.sidebar.header("📍 지표 기본 설정")
 가중치_값 = st.sidebar.number_input("가중치", value=5.000, format="%.3f")
 지표방향 = st.sidebar.selectbox("지표 방향", ["상향", "하향"])
 
 st.subheader("1. 실적 데이터 입력 및 기초 통계")
 
-# 입력란을 6개 열로 구성 (과거 5년 + 2026년 예상)
-입력_열 = st.columns(6)
-과거_연도 = [2021, 2022, 2023, 2024, 2025]
+# [요청 반영] 1행: 제목 행 (표 디자인과 동일)
+header_cols = st.columns(6)
+titles = ["2021년 실적", "2022년 실적", "2023년 실적", "2024년 실적", "2025년 실적", "2026년 예상 실적"]
+for col, title in zip(header_cols, titles):
+    bg_color = "#3182CE" if "2026" in title else "#4A5568" # 2026년만 다른 색상 헤더
+    col.markdown(f"""<div style="background-color:{bg_color}; color:white; padding:10px; text-align:center; font-weight:bold; border-radius:4px 4px 0 0; font-size:15px;">{title}</div>""", unsafe_allow_html=True)
+
+# [요청 반영] 2행: 입력 행 (표 내부 셀 디자인)
+input_cols = st.columns(6)
 실적_리스트 = []
-
-for i, 연도 in enumerate(과거_연도):
-    with 입력_열[i]:
-        값 = st.number_input(f"{연도} 실적", value=100.0 + (i*5), format="%.3f", key=f"v_{연도}")
+for i in range(5):
+    with input_cols[i]:
+        # 연도별 실적 입력 (기존 8e4778 디자인 기반)
+        값 = st.number_input(f"v_{2021+i}", value=100.0 + (i*5), format="%.3f", label_visibility="collapsed")
         실적_리스트.append(값)
+        st.markdown('<div style="height:5px;"></div>', unsafe_allow_html=True)
 
-with 입력_열[5]:
-    # 2026년 예상 실적 (강조된 입력칸)
-    예상실적_입력 = st.number_input("2026년 예상", value=실적_리스트[-1] * 1.05, format="%.3f", key="v_2026")
+with input_cols[5]:
+    # [요청 반영] 2026년 예상 실적 입력 (연한 배경색 강조)
+    st.markdown('<div class="highlight-cell">', unsafe_allow_html=True)
+    예상실적_입력 = st.number_input("v_2026", value=실적_리스트[-1] * 1.05, format="%.3f", label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 통계치 계산 ---
-# 5개년 지표
 평균_5년 = np.mean(실적_리스트)
 표준편차_5년 = np.std(실적_리스트)
 CAGR_5년 = ((실적_리스트[-1] / 실적_리스트[0])**(1/4) - 1) * 100 if 실적_리스트[0] != 0 else 0
 
-# 3개년 지표
 실적_3년 = 실적_리스트[-3:]
 평균_3년 = np.mean(실적_3년)
 표준편차_3년 = np.std(실적_3년)
 CAGR_3년 = ((실적_3년[-1] / 실적_3년[0])**(1/2) - 1) * 100 if 실적_3년[0] != 0 else 0
 
-# 기준치 산정 (상향 시 max, 하향 시 min)
 기준치 = max(평균_3년, 실적_리스트[-1]) if 지표방향 == "상향" else min(평균_3년, 실적_리스트[-1])
 
 # [요청 반영] 재구성된 통계 표
+st.markdown('<div style="margin-top:20px;"></div>', unsafe_allow_html=True)
 stats_df = pd.DataFrame({
-    "과거 5개년 평균": [평균_5년],
-    "과거 5개년 표준편차": [표준편차_5년],
-    "과거 5개년 연평균 증가율(%)": [CAGR_5년],
-    "과거 3개년 평균": [평균_3년],
-    "과거 3개년 표준편차": [표준편차_3년],
-    "과거 3개년 연평균 증가율(%)": [CAGR_3년]
+    "과거 5개년 평균": [평균_5년], "과거 5개년 표준편차": [표준편차_5년], "과거 5개년 연평균 증가율(%)": [CAGR_5년],
+    "과거 3개년 평균": [평균_3년], "과거 3개년 표준편차": [표준편차_3년], "과거 3개년 연평균 증가율(%)": [CAGR_3년]
 })
 st.table(stats_df.style.format("{:.3f}"))
 
@@ -154,12 +150,12 @@ if st.button("🚀 통합 성과 분석 실행"):
         "최저목표": "{:.3f}", "최고목표": "{:.3f}", "예상평점": "{:.2f}", "예상득점": "{:.3f}"
     }))
 
-    # 도전성 단계 판정 기준 (한 줄 레이아웃)
+    # 도전성 단계 판정 기준 (한 줄 레이아웃 복구)
     st.markdown("""
     <div style="background-color: #f8faff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 15px;">
         <p style="margin-bottom: 15px;">
             <span style="font-size: 16px; font-weight: bold; color: #2d3748;">🔍 도전성 단계(zp) 판정 기준</span>
-            <span style="font-size: 13px; color: #718096; margin-left: 10px;">: 최고목표가 과거 추세 대비 얼마나 도전적인지 판정합니다.</span>
+            <span style="font-size: 13px; color: #718096; margin-left: 10px;">: 최고목표가 과거 추세치 대비 통계적으로 얼마나 도전적인 수준인지 판정합니다.</span>
         </p>
         <div style="display: flex; justify-content: space-between; align-items: center; text-align: center;">
             <div style="flex: 1;"><strong>🏆 한계 혁신</strong><br><span style="font-size: 12px; color: #94a3b8;">150% 이상</span></div>
