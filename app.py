@@ -61,7 +61,7 @@ with st.sidebar:
 
 st.title("⚖️ 성과지표 목표 설정 시뮬레이터")
 
-# 1번 섹션
+# 1. 실적 전망 섹션
 st.subheader("1. 과거 5개년 및 2026년 실적 기반 중장기 실적 전망")
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
@@ -140,7 +140,7 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
         판정 = "✅ 유지" if (abs(최고 - 기준치) <= (3 * std3) and abs(최고/기준치 - 1) <= 0.3) else "⚠️ 한계"
         결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
-    # 2번 섹션 - 표 출력
+    # 2. 평가방법별 목표 도전성 비교
     st.subheader("2. 평가방법별 목표 도전성 비교")
     html_table = f"""
     <table style="width:100%; border-collapse: collapse; text-align: center;">
@@ -162,7 +162,7 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     """
     st.markdown(html_table, unsafe_allow_html=True)
 
-    # 완벽했던 가이드 박스 복구
+    # [복구 및 강화] 가이드 박스 내 시나리오 설명 추가
     st.markdown(f"""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
@@ -171,12 +171,16 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
         • 🔥 <b>적극 상향</b>: 과거 변동폭의 1.6배~3배 수준으로 공격적 목표 수준<br>
         • 📈 <b>소극 개선</b>: 과거 변동 범위 내에 존재하며 완만한 우상향 추세를 따르는 수준<br>
         • ⚖️ <b>현상 유지</b>: 관리 중심 목표 수준<br><br>
-        <b>2. 추세치 분석결과 (한계 판정 기준)</b><br>
+        <b>2. 시나리오 분석 정의 (통계적 근거)</b><br>
+        • 🔵 <b>도전 시나리오</b>: 선형 추세치에 과거 5개년 표준편차($\sigma$)의 1.5배를 가산한 공격적 전망<br>
+        • ⚪ <b>유지 시나리오</b>: 과거 6개년(과거5년+2026년예상)의 흐름을 반영한 정교한 선형 추세 전망<br>
+        • 🟡 <b>보수 시나리오</b>: 선형 추세치에서 과거 5개년 표준편차($\sigma$)의 1.0배를 감산한 안정적 전망<br><br>
+        <b>3. 추세치 분석결과 (한계 판정 기준)</b><br>
         • ⚠️ <b>한계</b>: 과거 표준편차의 3배를 초과하거나 30% 이상 급변하여 역량상 임계점에 도달했음을 의미
     </div>
     """, unsafe_allow_html=True)
 
-    # 3번 섹션 - 그래프
+    # 3. 중장기 추세 및 시나리오별 목표 궤적 분석
     st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
     years_all = [f"'{y-2000}" for y in range(2021, 2030)]
     years_past = years_all[:6]
@@ -190,9 +194,7 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
 
     fig, ax = plt.subplots(figsize=(13, 6.5))
     
-    # 플로팅 및 라벨링
-    ax.plot(years_past, Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=20)
-    ax.scatter(years_all[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=15)
+    # 플로팅 순서 조정
     ax.plot(years_future, line_challenge, color='#3182CE', linestyle='--', linewidth=2, label='도전 시나리오', zorder=2)
     ax.plot(years_future, line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오', zorder=2)
     ax.plot(years_future, line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오', zorder=2)
@@ -201,12 +203,13 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
         if row['구분'] == "목표부여":
             ax.scatter(years_all[5], row['최고목표'], s=120, zorder=12, edgecolors='white', linewidth=1, label=f"{row['평가방법']}")
 
-    ax.fill_between(years_future, line_conservative, line_challenge, color='#EBF8FF', alpha=0.3)
-    ax.plot(years_all, slope_f * np.arange(9) + intercept_f, color='#EDF2F7', linestyle=':', zorder=1) 
+    ax.scatter(years_all[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=15)
+    ax.plot(years_past, Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=20)
 
-    # 범례 순서 강제 조정 (과거 실적 최상단)
+    ax.fill_between(years_future, line_conservative, line_challenge, color='#EBF8FF', alpha=0.3)
+    ax.plot(years_all, slope_f * np.arange(9) + intercept_f, color='#EDF2F7', linestyle=':', zorder=1)
+
     handles, labels = ax.get_legend_handles_labels()
-    # "과거 5개년 실적" 인덱스 찾기
     try:
         past_idx = labels.index("과거 5개년 실적")
         new_order = [past_idx] + [i for i, l in enumerate(labels) if i != past_idx]
