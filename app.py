@@ -27,7 +27,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. 페이지 설정 및 디자인 CSS
+# 2. 페이지 설정 및 강력한 CSS 레이아웃 제어
 st.set_page_config(page_title="경영평가 시뮬레이터", layout="wide")
 
 st.markdown("""
@@ -36,33 +36,46 @@ st.markdown("""
     th { background-color: #4A5568 !important; color: white !important; text-align: center !important; font-size: 15px !important; border: 1px solid #dee2e6 !important; }
     td { text-align: center !important; vertical-align: middle !important; font-size: 15px !important; border: 1px solid #dee2e6 !important; }
 
-    /* 입력 위젯 공통 스타일: 수치 글씨 크기 확대 및 중앙 정렬 */
-    div[data-testid="stNumberInput"] { margin-bottom: 0px !important; padding: 0px !important; }
-    div[data-testid="stNumberInput"] label { display: none !important; } 
+    /* 입력 위젯 박스 여백 완전 제거 (줄내림 방지) */
+    [data-testid="column"] {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+    
+    div[data-testid="stNumberInput"] { 
+        margin-top: -1px !important; /* 헤더 테두리와 겹치게 하여 선을 하나처럼 보이게 함 */
+    }
+
+    /* 입력 수치 글씨 크기 확대 (15px) 및 중앙 정렬 */
     div[data-testid="stNumberInput"] input {
-        border: 1px solid #dee2e6 !important;
         text-align: center !important;
-        font-size: 15px !important; /* 아래 표와 동일하게 확대 */
+        font-size: 15px !important;
         height: 42px !important;
+        border: 1px solid #dee2e6 !important;
         border-radius: 0px !important;
     }
 
-    /* 2026년 예상 실적 입력칸 강조 (연한 녹색 배경) */
-    .highlight-cell input {
-        background-color: #F0FFF4 !important; 
-        border: 1px solid #68D391 !important;
+    /* 2026년 예상 실적 강조 (다른 녹색 배경) */
+    .highlight-input input {
+        background-color: #F7FFF9 !important;
+        border: 1px solid #52B788 !important;
         font-weight: bold !important;
-        color: #2F855A !important;
+        color: #1B4332 !important;
     }
 
-    /* 헤더 영역 공통 스타일 */
+    /* 헤더 공통 스타일 */
     .header-box {
         color: white; 
         padding: 10px; 
         text-align: center; 
         font-weight: bold; 
-        font-size: 15px;
+        font-size: 14px;
         border: 1px solid #dee2e6;
+        min-height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -76,26 +89,26 @@ st.sidebar.header("📍 지표 기본 설정")
 
 st.subheader("1. 실적 데이터 입력 및 기초 통계")
 
-# 헤더 행 (녹색 계열 테마)
-header_cols = st.columns(6)
+# 입력 표 헤더 & 입력란 (한 줄 정렬을 위해 6개 열 생성)
+cols = st.columns(6)
 titles = ["2021년 실적", "2022년 실적", "2023년 실적", "2024년 실적", "2025년 실적", "2026년 예상 실적"]
-for col, title in zip(header_cols, titles):
-    bg_color = "#2D6A4F" # 짙은 녹색 테마
-    col.markdown(f'<div class="header-box" style="background-color:{bg_color};">{title}</div>', unsafe_allow_html=True)
-
-# 입력 행 (정확히 한 줄로 배치)
-input_cols = st.columns(6)
 실적_리스트 = []
-for i in range(5):
-    with input_cols[i]:
-        값 = st.number_input(f"v_{2021+i}", value=100.0 + (i*5), format="%.3f", label_visibility="collapsed")
-        실적_리스트.append(값)
 
-with input_cols[5]:
-    # 2026년 예상 실적 입력 (한 줄 정렬 및 강조)
-    st.markdown('<div class="highlight-cell">', unsafe_allow_html=True)
-    예상실적_입력 = st.number_input("v_2026", value=실적_리스트[-1] * 1.05, format="%.3f", label_visibility="collapsed")
-    st.markdown('</div>', unsafe_allow_html=True)
+for i in range(6):
+    with cols[i]:
+        # 헤더 출력 (2026년만 다른 녹색)
+        bg_color = "#52B788" if i == 5 else "#2D6A4F"
+        st.markdown(f'<div class="header-box" style="background-color:{bg_color};">{titles[i]}</div>', unsafe_allow_html=True)
+        
+        # 입력란 출력
+        if i < 5:
+            val = st.number_input(f"v_{2021+i}", value=100.0 + (i*5), format="%.3f", label_visibility="collapsed")
+            실적_리스트.append(val)
+        else:
+            # 2026년 예상 실적 강조 입력칸
+            st.markdown('<div class="highlight-input">', unsafe_allow_html=True)
+            예상실적_입력 = st.number_input("v_2026", value=실적_리스트[-1] * 1.05, format="%.3f", label_visibility="collapsed")
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 통계치 계산 ---
 평균_5년 = np.mean(실적_리스트)
@@ -109,7 +122,7 @@ CAGR_3년 = ((실적_3년[-1] / 실적_3년[0])**(1/2) - 1) * 100 if 실적_3년
 
 기준치 = max(평균_3년, 실적_리스트[-1]) if 지표방향 == "상향" else min(평균_3년, 실적_리스트[-1])
 
-# 기초 통계 표 (기존 요청 순서 유지)
+# 기초 통계 표 (요청하신 순서)
 st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
 stats_df = pd.DataFrame({
     "과거 5개년 평균": [평균_5년], "과거 5개년 표준편차": [표준편차_5년], "과거 5개년 연평균 증가율(%)": [CAGR_5년],
