@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (원본 유지 + 사이드바 스타일 추가)
+# 2. CSS 디자인 (원본 유지 + 사이드바 제목 스타일 강화)
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -36,28 +36,49 @@ st.markdown("""
     .bg-current { background-color: #D69E2E; }
     .bg-future { background-color: #4A5568; }
     .sub-header { background-color: #f1f3f5; padding: 5px; text-align: center; font-size: 13px; font-weight: bold; border: 1px solid #dee2e6; border-top: none; }
-    div[data-testid="stNumberInput"] label { display: none !important; }
-    /* 사이드바 전용 라벨 표시 */
-    .sidebar .stTextInput label, .sidebar .stNumberInput label, .sidebar .stRadio label { 
-        display: block !important; font-weight: bold; color: #4A5568; margin-bottom: 5px;
+    
+    /* 사이드바 제목 스타일링 */
+    .sb-title { 
+        font-size: 16px !important; 
+        font-weight: 800 !important; 
+        color: #1A202C; 
+        margin-top: 15px; 
+        margin-bottom: 5px; 
+        display: block;
     }
+    
+    div[data-testid="stNumberInput"] label { display: none !important; }
+    /* 사이드바 내 입력칸 레이블만 숨김 (직접 만든 제목을 사용하기 위함) */
+    .sidebar div[data-testid="stTextInput"] label, 
+    .sidebar div[data-testid="stRadio"] label { 
+        display: none !important; 
+    }
+    
     .auto-res { background-color: #F8FAFC; border: 1px solid #dee2e6; height: 42px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
     .guide-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-top: 15px; line-height: 1.8; }
     .guide-title { font-weight: bold; color: #2D3748; font-size: 16px; margin-bottom: 10px; display: block; }
-    .formula { background-color: #EDF2F7; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; color: #2C5282; }
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
     td { text-align: center !important; }
     thead tr th:first-child, tbody tr th { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 사이드바 개선 (지표명, 라디오 버튼, 가중치)
+# 3. 사이드바 개선 (제목 강조 및 배치 조정)
 with st.sidebar:
     st.markdown("### ⚙️ 지표 설정")
-    지표명 = st.text_input("📌 지표명", value="주요 성과지표(KPI)")
-    지표방향 = st.radio("🎯 지표 성격", ["상향", "하향"], horizontal=True)
-    가중치_값 = st.number_input("⚖️ 가중치", value=5.000, step=0.001, format="%.3f")
-    st.info(f"현재 설정된 지표: **{지표명}**")
+    st.markdown("---")
+    
+    st.markdown('<p class="sb-title">📌 지표명</p>', unsafe_allow_html=True)
+    지표명 = st.text_input("지표명_입력", value="주요 성과지표(KPI)")
+    
+    st.markdown('<p class="sb-title">🎯 지표 성격</p>', unsafe_allow_html=True)
+    지표방향 = st.radio("지표방향_선택", ["상향", "하향"], horizontal=True)
+    
+    st.markdown('<p class="sb-title">⚖️ 가중치</p>', unsafe_allow_html=True)
+    가중치_값 = st.number_input("가중치_입력", value=5.000, step=0.001, format="%.3f")
+    
+    st.markdown("---")
+    st.info(f"설정 지표: **{지표명}**")
 
 st.title("⚖️ 중장기 성과지표 목표설정 및 한계점 분석기")
 
@@ -66,7 +87,7 @@ st.subheader("1. 실적 데이터 및 중장기 전망 입력")
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
 
-# --- 과거 5개년 섹션 (토씨 하나 틀리지 않음) ---
+# --- 실적 데이터 입력 로직 (토씨 하나 틀리지 않음) ---
 with m_cols[0]:
     st.markdown('<div class="main-header bg-past">과거 5개년 실적 (2021~2025)</div>', unsafe_allow_html=True)
     p_cols = st.columns(5)
@@ -76,13 +97,11 @@ with m_cols[0]:
             val = st.number_input(f"p_{year}", value=round(100.0 + (i*5), 3), step=0.001, format="%.3f", key=f"v_{year}")
             실적_리스트.append(val)
 
-# --- 2026 예상 섹션 ---
 with m_cols[1]:
     st.markdown('<div class="main-header bg-current">2026년 (예상)</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">실적 입력</div>', unsafe_allow_html=True)
     예상_2026 = st.number_input("curr_2026", value=round(실적_리스트[-1] * 1.05, 3), step=0.001, format="%.3f", key="v_2026")
 
-# --- 미래 전망 섹션 ---
 with m_cols[2]:
     st.markdown('<div class="main-header bg-future">중장기 실적 전망 (자동)</div>', unsafe_allow_html=True)
     f_cols = st.columns(3)
@@ -141,7 +160,7 @@ if st.button("🚀 중장기 성과 및 한계점 분석 실행"):
     df_res = pd.DataFrame(결과_데이터)
     st.table(df_res.style.format({col: "{:.3f}" for col in ["기준치", "최저목표", "최고목표", "예상실적", "예상평점", "가중치", "예상득점"]}))
 
-    # 가이드 설명 (사용자 원본 토씨 유지)
+    # 가이드 설명 (사용자 원본 문구 보존)
     st.markdown("""
     <div class="guide-box">
         <span class="guide-title">💡 분석 지표 가이드</span>
