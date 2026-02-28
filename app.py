@@ -26,33 +26,22 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (디테일 수정 반영)
+# 2. CSS 디자인
 st.set_page_config(page_title="성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
     html, body, [class*="st-"] { font-size: 15px !important; font-family: 'NanumGothic', sans-serif; }
-    
-    /* 사이드바 커스텀 */
     .sidebar-label { font-size: 16px; font-weight: 800; color: #1A202C; margin-top: 15px; margin-bottom: 8px; display: block; }
     .sidebar-white-box { background-color: white; border-radius: 8px; padding: 12px; border: 1px solid #E2E8F0; margin-bottom: 5px; }
-    
-    div[data-testid="stNumberInput"] label, 
-    div[data-testid="stTextInput"] label, 
-    div[data-testid="stRadio"] > label { display: none !important; }
-
-    /* 메인 섹션 헤더 */
+    div[data-testid="stNumberInput"] label, div[data-testid="stTextInput"] label, div[data-testid="stRadio"] > label { display: none !important; }
     .main-header { padding: 10px; color: white; text-align: center; font-weight: bold; margin-bottom: 5px; border-radius: 5px 5px 0 0; }
     .bg-past { background-color: #2D6A4F; }
     .bg-current { background-color: #D69E2E; }
     .bg-future { background-color: #4A5568; }
     .sub-header { background-color: #f1f3f5; padding: 5px; text-align: center; font-size: 13px; font-weight: bold; border: 1px solid #dee2e6; border-top: none; }
     .auto-res { background-color: #F8FAFC; border: 1px solid #dee2e6; height: 42px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
-    
-    /* 가이드 박스 */
     .guide-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-top: 15px; line-height: 1.8; }
     .guide-title { font-weight: bold; color: #2D3748; font-size: 16px; margin-bottom: 10px; display: block; }
-    
-    /* 테이블 스타일 */
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
     td { text-align: center !important; vertical-align: middle !important; border: 1px solid #E2E8F0; }
     .merged-cell { background-color: #EDF2F7; font-weight: bold; color: #2D3748; width: 120px; }
@@ -63,18 +52,16 @@ st.markdown("""
 with st.sidebar:
     st.markdown('<span class="sidebar-label">📌 지표명</span>', unsafe_allow_html=True)
     지표명 = st.text_input("kpi_name", value="전략 KPI")
-    
     st.markdown('<span class="sidebar-label">🎯 지표 성격</span>', unsafe_allow_html=True)
     st.markdown('<div class="sidebar-white-box">', unsafe_allow_html=True)
     지표방향 = st.radio("direction", ["상향", "하향"], horizontal=True)
     st.markdown('</div>', unsafe_allow_html=True)
-    
     st.markdown('<span class="sidebar-label">⚖️ 가중치</span>', unsafe_allow_html=True)
     가중치_값 = st.number_input("weight", value=5.000, step=0.001, format="%.3f")
 
-# --- [수정] 1번 섹션 제목 변경 ---
+# --- [수정] 1번 제목 정정 ---
 st.title("⚖️ 중장기 성과지표 목표설정 및 한계점 분석기")
-st.subheader("1. 과거 5개년 및 2026년(당해연도 수치 자동입력) 실적 기반 중장기 실적 전망")
+st.subheader("1. 과거 5개년 및 2026년 실적 기반 중장기 실적 전망")
 
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
@@ -88,14 +75,16 @@ with m_cols[0]:
             val = st.number_input(f"p_{year}", value=round(100.0 + (i*5), 3), step=0.001, format="%.3f", key=f"v_{year}")
             실적_리스트.append(val)
 
+# 추세 기반 2026년 자동 계산
 X_past = np.arange(5)
 Y_past = np.array(실적_리스트)
 slope_p, intercept_p = np.polyfit(X_past, Y_past, 1)
 suggested_2026 = round(slope_p * 5 + intercept_p, 3)
 
 with m_cols[1]:
-    st.markdown('<div class="main-header bg-current">2026년 (예측치)</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">추세 기반 자동제안</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header bg-current">2026년 (예상치)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">추세 기반 자동입력</div>', unsafe_allow_html=True)
+    # 여기에 해당 연도 수치가 자동으로 들어갑니다.
     예상_2026 = st.number_input("curr_2026", value=suggested_2026, step=0.001, format="%.3f", key="v_2026")
 
 with m_cols[2]:
@@ -111,10 +100,9 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# [복구] 실적 분석 참고내용 (중장기 전망 표준편차 포함)
+# [복구 및 확정] 중장기 전망 분석결과 표준편차 포함
 avg3, std3 = round(np.mean(실적_리스트[-3:]), 3), round(np.std(실적_리스트[-3:]), 3)
 avg5, std5 = round(np.mean(실적_리스트), 3), round(np.std(실적_리스트), 3)
-# 미래 전망 데이터에 2026년치를 포함하여 변동성 산출
 전망_데이터 = [예상_2026] + 미래_전망
 avg_f, std_f = round(np.mean(전망_데이터), 3), round(np.std(전망_데이터), 3)
 
@@ -123,13 +111,12 @@ st.markdown(f"""
     <span class="guide-title">📑 실적 분석 참고내용</span>
     • <b>과거 3개년 실적 분석결과:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[-3])**(1/2)-1)*100, 3) if 실적_리스트[-3]!=0 else 0:.3f}%<br>
     • <b>과거 5개년 실적 분석결과:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {round(((실적_리스트[-1]/실적_리스트[0])**(1/4)-1)*100, 3) if 실적_리스트[0]!=0 else 0:.3f}%<br>
-    • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, 표준편차 {std_f:.3f}, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3) if 예상_2026!=0 else 0:.3f}%
+    • <b>중장기 전망 분석결과:</b> 평균 {avg_f:.3f}, <b>표준편차 {std_f:.3f}</b>, 연평균 증가율 {round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3) if 예상_2026!=0 else 0:.3f}%
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# [결과 출력 부분 - 오타 수정 완료]
 if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
     기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
     
@@ -152,7 +139,7 @@ if st.button("🚀 전체 분석 및 시나리오 비교 실행"):
         zp = (최고 - 예상_2026) / 오차 if 지표방향=="상향" else (예상_2026 - 최고) / 오차
         도전성_지수 = round((zp / 2.0) * 100, 3)
         단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지"
-        판정 = "⚠️ 한계" if (abs(최고 - 기준치) > (3 * std3) or abs(최고/기준치 - 1) > 0.3) else "✅ 유지"
+        판정 = "✅ 유지" if (abs(최고 - 기준치) <= (3 * std3) and abs(최고/기준치 - 1) <= 0.3) else "⚠️ 한계"
         결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
     st.subheader("2. 평가방법별 목표 도전성 비교")
