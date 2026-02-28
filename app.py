@@ -2,12 +2,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime
 
 # 페이지 설정
 st.set_page_config(page_title="경영평가 지표 시뮬레이터", layout="wide")
 
-# 현재 연도 기준 설정 (2026년)
+# 현재 연도 기준 설정
 current_year = 2026 
 past_years = [current_year - i for i in range(5, 0, -1)]  # [2021, 2022, 2023, 2024, 2025]
 
@@ -28,21 +27,28 @@ global_perf = st.sidebar.number_input("글로벌 실적(비교군 평균)", valu
 # 1. 실적 데이터 입력 섹션
 st.subheader("1. 실적 데이터 입력")
 
-st.markdown("""
-<style>
-    .header-box {
-        background-color: #f0f2f6;
-        padding: 5px;
-        border-radius: 5px;
-        text-align: center;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-</style>
-<div class="header-box">과거 5개년 실적</div>
-""", unsafe_allow_html=True)
-
+# 전체 9개 열 정의
 cols = st.columns(9)
+
+# --- 과거 5개년 실적 범주 (열 0~5번까지) ---
+with st.container():
+    st.markdown("""
+    <style>
+        .group-header {
+            background-color: #f0f2f6;
+            padding: 5px;
+            border-radius: 5px 5px 0 0;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid #d1d5db;
+            margin-bottom: -1px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # 0번부터 5번 열까지(실적 5개 + 표준편차)를 아우르는 헤더
+    # Streamlit의 columns 구조상 시각적 범위를 맞추기 위해 HTML 배치를 활용합니다.
+    st.markdown('<div class="group-header" style="width: 66.3%;">과거 5개년 실적</div>', unsafe_allow_html=True)
 
 # 실적 입력 (2021~2025)
 hist = []
@@ -62,23 +68,25 @@ if direction == "상향":
 else:
     base_val = min(avg_3y, last_year_val)
 
+# 과거 5개년 실적 범주의 마지막 열: 표준편차
 with cols[5]:
     st.text_input("5개년 표준편차", value=f"{std_5y:.3f}", disabled=True)
+
+# --- 독립 열들 (6, 7, 8번 열) ---
 with cols[6]:
     st.text_input("3개년 평균", value=f"{avg_3y:.3f}", disabled=True)
 with cols[7]:
     st.text_input("기준치", value=f"{base_val:.3f}", disabled=True)
-
-# 당해연도(2026년) 예상실적 기입
 with cols[8]:
-    est = st.number_input(f"{current_year}년 예상실적", value=base_val * 1.05, format="%.3f")
+    st.number_input(f"{current_year}년 예상실적", value=base_val * 1.05, format="%.3f", key="est_input")
+
+# 예상실적 값 가져오기
+est = st.session_state.est_input
 
 if st.button("🚀 모든 평가방법 통합 분석 실행"):
-    # 중장기 목표치 계산
     lt_base = base_val + (long_term_goal - base_val) / 4
 
     # 6종 평가방법 리스트
-    # 구성: (방법명, 최고목표, 최저목표)
     methods = [
         ("목표부여(2편차)", base_val + 2*std_5y, base_val - 2*std_5y),
         ("목표부여(1편차)", base_val + 1*std_5y, base_val - 1*std_5y),
@@ -93,7 +101,6 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
         if direction == "하향":
             hi, lo = lo, hi
             
-        # 평점 계산 (최저목표 20점 ~ 최고목표 100점)
         if hi == lo:
             score = 60.000
         else:
@@ -113,13 +120,11 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
     
     df = pd.DataFrame(results)
     
-    # 최적 및 최고 난이도 판별
     if direction == "상향":
         most_difficult = df.loc[df['최고목표'].idxmax()]
     else:
         most_difficult = df.loc[df['최고목표'].idxmin()]
     
-    # 결과 출력
     st.subheader("2. 평가방법별 비교 분석 결과")
     st.dataframe(df.style.format({
         "최고목표": "{:.3f}",
@@ -129,23 +134,18 @@ if st.button("🚀 모든 평가방법 통합 분석 실행"):
         "예상득점": "{:.3f}"
     }).highlight_max(axis=0, subset=['예상평점']), use_container_width=True)
 
-    # 시각화
     fig, ax = plt.subplots(figsize=(10, 5))
     x_labels = df['평가방법']
     x_axis = np.arange(len(x_labels))
-    
     ax.bar(x_axis - 0.2, df['최고목표'], 0.4, label='최고목표', color='skyblue')
     ax.bar(x_axis + 0.2, df['최저목표'], 0.4, label='최저목표', color='lightgrey')
-    
     ax.axhline(base_val, color='red', linestyle='--', label=f'기준치({base_val:.3f})')
-    
     ax.set_xticks(x_axis)
     ax.set_xticklabels(x_labels, rotation=45)
     ax.set_title("평가방법별 목표 구간 비교")
     ax.legend()
     st.pyplot(fig)
 
-    # 보고서 논리
     st.subheader("3. 경영평가 보고서용 소명 논리")
     st.info(f"""
     **[도전성 소명 문구]** 본 기관은 {indicator_name} 지표의 목표 설정을 위해 {len(methods)}개 평가방법을 시뮬레이션 하였습니다. 
