@@ -12,7 +12,7 @@ st.markdown("""
 가장 도전적인 목표치를 제안하여 담당자의 논리 수립을 돕습니다.
 """)
 
-# 메인화면: 실적 데이터 입력 (추세 계산을 위해 위로 올림)
+# 메인화면: 실적 데이터 입력
 st.subheader("1. 과거 실적 데이터 입력 (Y-5 ~ Y-1)")
 col1, col2, col3, col4, col5 = st.columns(5)
 with col1: y5 = st.number_input("Y-5 실적", value=100.000, format="%.3f", step=0.001)
@@ -25,7 +25,7 @@ hist = [y5, y4, y3, y2, y1]
 years = np.array([1, 2, 3, 4, 5])
 slope, intercept = np.polyfit(years, hist, 1)
 
-# [핵심] 추세 기반 중장기 목표 자동 계산 (Y+3은 8번째 포인트)
+# [수정 포인트] 명칭 변경: 중장기 목표치(3년 후 추정 목표치)
 suggested_lt_goal = slope * 8 + intercept
 
 # 사이드바: 기본 설정
@@ -35,8 +35,9 @@ weight = st.sidebar.number_input("가중치", value=5.0)
 direction = st.sidebar.selectbox("지표 방향", ["상향", "하향"])
 
 st.sidebar.markdown(f"---")
-st.sidebar.write(f"💡 **추세 기반 Y+3 추천치: {suggested_lt_goal:.3f}**")
-long_term_goal = st.sidebar.number_input("중장기 목표(Y+3) 설정", value=float(suggested_lt_goal), format="%.3f", step=0.001)
+# 요청하신 문구로 수정되었습니다.
+st.sidebar.write(f"💡 **중장기 목표치(3년 후 추정 목표치): {suggested_lt_goal:.3f}**")
+long_term_goal = st.sidebar.number_input("중장기 목표 설정", value=float(suggested_lt_goal), format="%.3f", step=0.001)
 
 # 당해 예상실적 입력
 st.markdown("---")
@@ -51,7 +52,7 @@ if st.button("🚀 모든 방법론 통합 분석 실행"):
     
     # 추세치 (Y+1 시점)
     trend_base = slope * 6 + intercept 
-    # 중장기 기반 당해 목표 산식 (기준치에서 중장기 목표까지 4개년 분할 점증)
+    # 중장기 기반 당해 목표 산식
     lt_base = base + (long_term_goal - base) / 4
 
     # 6종 방법론 리스트
@@ -93,7 +94,7 @@ if st.button("🚀 모든 방법론 통합 분석 실행"):
     st.subheader("4. 경영평가 보고서용 소명 논리")
     st.info(f"""
     **[도전성 소명 문구]** 본 기관은 {indicator_name} 지표의 목표 설정을 위해 6개 평가 방법론을 시뮬레이션 하였습니다. 
-    과거 5개년 실적 추세를 반영한 중장기 목표({long_term_goal:.3f})를 연계하여 산출한 결과, 
+    과거 5개년 실적 추세를 반영한 중장기 목표치({long_term_goal:.3f})를 연계하여 산출한 결과, 
     가장 도전적인 수치를 제시하는 **[{most_difficult['방법론']}]** 방식을 채택하였습니다. 
     이는 기준치 대비 **{most_difficult['도전성(%)']}% 상향**된 수준으로, 타 방식 대비 가장 엄격한 목표입니다.
     """)
