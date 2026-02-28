@@ -12,16 +12,18 @@ past_years = [current_year - i for i in range(5, 0, -1)]  # [2021, 2022, 2023, 2
 
 st.title("⚖️ 경영평가 계량지표 통합 시뮬레이터")
 
-# 시각적 개선을 위한 CSS: 글자색 강화 및 높이 정렬
+# 시각적 개선을 위한 CSS: 자동 계산 셀 배경색 및 글자색 강화
 st.markdown("""
 <style>
-    /* 자동 계산 항목(disabled)의 글자색을 검정색으로 강제 변경 */
+    /* 자동 계산 항목(disabled)의 스타일 커스텀 */
     input:disabled {
-        -webkit-text-fill-color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important; /* 글자색 검정 */
         color: #000000 !important;
-        font-weight: 500 !important;
-        background-color: #f8f9fa !important;
+        font-weight: 600 !important;
+        background-color: #E8F0FE !important; /* 연한 파란색 배경 (엑셀 자동계산 느낌) */
+        border: 1px solid #adc6ff !important; /* 테두리도 살짝 강조 */
         opacity: 1 !important;
+        cursor: not-allowed;
     }
     
     /* 대분류 헤더 디자인 */
@@ -35,11 +37,11 @@ st.markdown("""
         display: flex;
         align-items: center;
         justify-content: center;
-        height: 60px; /* 제목 행 높이 통일 */
+        height: 60px;
         margin-bottom: 5px;
     }
     
-    /* 소분류 라벨 디자인 (연도 등) */
+    /* 소분류 라벨 디자인 */
     .sub-label-text {
         text-align: center;
         font-size: 0.9em;
@@ -47,9 +49,12 @@ st.markdown("""
         color: #333;
         margin-bottom: 8px;
         height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    /* 입력칸 높이 및 폰트 통일 */
+    /* 입력칸 높이 미세 조정 */
     .stNumberInput, .stTextInput {
         margin-top: -5px;
     }
@@ -67,7 +72,7 @@ global_perf = st.sidebar.number_input("글로벌 실적(비교군 평균)", valu
 # 1. 실적 데이터 입력 섹션
 st.subheader("1. 실적 데이터 입력")
 
-# 대분류 레이아웃 (좌측 6칸: 과거실적 / 우측 각 1칸씩 독립열)
+# 대분류 레이아웃
 header_cols = st.columns([6, 1, 1, 1])
 with header_cols[0]:
     st.markdown('<div class="main-header-box">과거 5개년 실적</div>', unsafe_allow_html=True)
@@ -78,7 +83,7 @@ with header_cols[2]:
 with header_cols[3]:
     st.markdown('<div class="main-header-box">2026년 예상실적</div>', unsafe_allow_html=True)
 
-# 데이터 입력 행 레이아웃 (9개 열)
+# 데이터 입력 행 레이아웃
 data_cols = st.columns(9)
 
 # [과거 5개년 실적 입력부]
@@ -101,7 +106,7 @@ with data_cols[5]:
     st.text_input("표준편차", value=f"{std_5y:.3f}", label_visibility="collapsed", disabled=True)
 
 with data_cols[6]:
-    st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True) # 높이 맞춤용 공백
+    st.markdown('<div class="sub-label-text">&nbsp;</div>', unsafe_allow_html=True) 
     st.text_input("3개년평균값", value=f"{avg_3y:.3f}", label_visibility="collapsed", disabled=True)
 
 with data_cols[7]:
