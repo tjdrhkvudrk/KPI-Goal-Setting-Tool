@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import os
 import requests
-from io import BytesIO
 
 # 1. 한글 폰트 설정
 @st.cache_resource
@@ -27,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (완벽했던 스타일 그대로 유지)
+# 2. CSS 디자인
 st.set_page_config(page_title="계량 성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -46,6 +45,8 @@ st.markdown("""
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
     td { text-align: center !important; vertical-align: middle !important; border: 1px solid #E2E8F0; }
     .merged-cell { background-color: #EDF2F7; font-weight: bold; color: #2D3748; width: 120px; }
+    
+    /* 강조된 라벨 스타일 */
     .strong-label { font-size: 20px !important; font-weight: 900 !important; color: #1A365D !important; margin-bottom: 12px; display: block; }
 </style>
 """, unsafe_allow_html=True)
@@ -63,7 +64,7 @@ with st.sidebar:
 
 st.title("📊 계량 성과지표 목표 설정 및 중장기 전망 시뮬레이터")
 
-# 1. 실적 데이터 처리 (과거-현재-미래 레이아웃)
+# 1. 실적 데이터 처리
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
 with m_cols[0]:
@@ -113,7 +114,7 @@ st.markdown(f"""
 
 st.markdown("---")
 
-# 2. 도전성 비교 테이블 (방법론별 산식 설명 복구)
+# 2. 도전성 비교 테이블
 기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
 방법별 = [
     ("목표부여", "목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -134,7 +135,7 @@ for 분류, 명칭, 최고 in 방법별:
     도전성_지수 = round((((최고 - 예상_2026) / 오차 if 지표방향=="상향" else (예상_2026 - 최고) / 오차) / 2.0) * 100, 3)
     단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지"
     판정 = "✅ 유지" if (abs(최고 - 기준치) <= (3 * std3) and abs(최고/기준치 - 1) <= 0.3) else "⚠️ 한계"
-    결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "최저목표": 최저, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
+    결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
 st.subheader("2. 평가방법별 목표 도전성 비교")
 html_table = f"""
@@ -153,15 +154,7 @@ html_table = f"""
 """
 st.markdown(html_table, unsafe_allow_html=True)
 
-# [복구] 2번 표 하단 설명
-st.markdown(f"""
-<div class="guide-box" style="margin-top: 5px; padding: 15px;">
-    • <b>목표부여 산식:</b> 기준치(Max(3개년평균, 전년실적)) 대비 표준편차(σ) 또는 비율 반영<br>
-    • <b>판정 기준:</b> 기준치 대비 변동폭이 3시그마(3σ) 이내이거나 30% 이내일 경우 '✅ 유지' 판정
-</div>
-""", unsafe_allow_html=True)
-
-# 3. 그래프 (시나리오별 추세 설명 복구)
+# 3. 그래프
 st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
 years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
 idx_future = np.arange(6, 10)
@@ -186,15 +179,7 @@ ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True,
 ax.grid(axis='y', linestyle='-', alpha=0.1)
 st.pyplot(fig)
 
-# [복구] 3번 그래프 하단 설명
-st.markdown(f"""
-<div class="guide-box" style="margin-top: 5px; padding: 15px;">
-    • <b>도전 시나리오:</b> 추세선 대비 1.5표준편차(σ) 상향하여 한계 혁신을 유도하는 궤적<br>
-    • <b>유지 시나리오:</b> 과거 5개년 실적과 예상 실적을 잇는 선형 추세선(Linear Regression) 기반 전망
-</div>
-""", unsafe_allow_html=True)
-
-# 4. 담당자 제언 (강조된 라벨 및 대조 로직)
+# 4. 담당자 제언 (비교대상 명칭 수정: '기준치')
 st.markdown("---")
 st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
 
@@ -214,23 +199,32 @@ with c2:
 sel = next(item for item in 결과_데이터 if item["평가방법"] == 선택방법)
 sigma_lv = round(abs(sel['최고목표'] - 예상_2026) / std5, 2) if std5 != 0 else 0
 
+# '기준치' 선택 시의 종합 통계 분석 로직
 if 비교방법 == "기준치":
     base_gap = round(abs(sel['최고목표'] - 기준치), 3)
     base_sigma = round(base_gap / std3, 2) if std3 != 0 else 0
     imp_rate_vs_base = round((base_gap / 기준치) * 100, 2) if 기준치 != 0 else 0
-    gap_display, sub_label = str(base_gap), "기준치 대비 상향액"
-    logic_text = f"통계적 기준치(<b>{기준치:.3f}</b>) 대비 <b>{base_gap}</b>({imp_rate_vs_base}%)을 상향 설정하였으며, 이는 과거 변동폭의 <b>{base_sigma}배</b> 수준입니다. 최근 3개년 평균 및 전년 실적을 상회하는 <b>{sel['도전성 단계']}</b> 목표로서 타당성을 확보하였습니다."
+    
+    gap_display = str(base_gap)
+    sub_label = "기준치 대비 상향액"
+    logic_text = f"""통계적 기준치(<b>{기준치:.3f}</b>) 대비 <b>{base_gap}</b>({imp_rate_vs_base}%)을 상향 설정하였으며, 
+    이는 과거 실적 변동폭(표준편차)의 <b>{base_sigma}배</b>에 달하는 수준입니다. 
+    최근 3개년 평균 및 전년 실적을 모두 상회하는 <b>{sel['도전성 단계']}</b> 목표로서 객관적 타당성을 확보하였습니다."""
 else:
     comp = next(item for item in 결과_데이터 if item["평가방법"] == 비교방법)
     gap = round(abs(sel['최고목표'] - comp['최고목표']), 3)
-    gap_display, sub_label = str(gap), "목표 상향액(Gap)"
+    
+    gap_display = str(gap)
+    sub_label = "목표 상향액(Gap)"
     logic_text = f"대안 모델인 '{비교방법}({comp['최고목표']:.3f})' 대비 <b>{gap}</b>의 추가 상향을 통해 기관의 성과 창출 의지를 적극 반영하였습니다."
 
 st.markdown(f"""
 <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <span style="background-color: #ebf8ff; color: #2b6cb0; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">AI 논리 분석 결과: {sel['도전성 단계']}</span>
-        <span style="color: #718096; font-size: 13px;">분석 기준일: 2026. 03. 03.</span>
+        <span style="background-color: #ebf8ff; color: #2b6cb0; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">
+            AI 논리 분석 결과: {sel['도전성 단계']}
+        </span>
+        <span style="color: #718096; font-size: 13px;">분석 기준일: 2026. 02. 28.</span>
     </div>
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
         <div style="text-align: center; padding: 15px; background-color: #f7fafc; border-radius: 10px;">
@@ -254,30 +248,3 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
-
-# 엑셀 다운로드 (오류 방지를 위해 dataframe 구조화 및 xlsxwriter 사용)
-def make_excel(data, kpi_name, weight, selected_method):
-    output = BytesIO()
-    df = pd.DataFrame(data)
-    df['최종선택여부'] = df['평가방법'].apply(lambda x: 'V' if x == selected_method else '')
-    # 필요한 컬럼 순서 조정
-    cols = ['구분', '평가방법', '기준치', '최고목표', '최저목표', '예상평점', '예상득점', '도전성 단계', '분석결과', '최종선택여부']
-    df = df[cols]
-    
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Simulation_Result')
-        workbook = writer.book
-        worksheet = writer.sheets['Simulation_Result']
-        header_format = workbook.add_format({'bold': True, 'bg_color': '#4A5568', 'font_color': 'white', 'border': 1})
-        for col_num, value in enumerate(df.columns.values):
-            worksheet.write(0, col_num, value, header_format)
-    return output.getvalue()
-
-st.markdown("<br>", unsafe_allow_html=True)
-excel_data = make_excel(결과_데이터, 지표명, 가중치_값, 선택방법)
-st.download_button(
-    label="📥 시뮬레이션 결과 엑셀(.xlsx) 다운로드",
-    data=excel_data,
-    file_name=f"{지표명}_목표설정_시뮬레이션.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
