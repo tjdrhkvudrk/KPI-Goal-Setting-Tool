@@ -27,7 +27,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인 (상세 설명 카드 스타일 포함)
+# 2. CSS 디자인
 st.set_page_config(page_title="계량 성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -42,16 +42,15 @@ st.markdown("""
     .sub-header { background-color: #f1f3f5; padding: 5px; text-align: center; font-size: 13px; font-weight: bold; border: 1px solid #dee2e6; border-top: none; }
     .auto-res { background-color: #F8FAFC; border: 1px solid #dee2e6; height: 42px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
     .guide-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-top: 15px; line-height: 1.8; }
-    .guide-title { font-weight: bold; color: #2D3748; font-size: 16px; margin-bottom: 10px; display: block; }
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
     td { text-align: center !important; vertical-align: middle !important; border: 1px solid #E2E8F0; }
     .merged-cell { background-color: #EDF2F7; font-weight: bold; color: #2D3748; width: 120px; }
     .strong-label { font-size: 20px !important; font-weight: 900 !important; color: #1A365D !important; margin-bottom: 12px; display: block; }
-    
-    /* 4단계 상세 설명 카드 스타일 */
     .step-card { border-radius: 10px; padding: 15px; border-left: 5px solid; margin-bottom: 10px; background-color: #FFFFFF; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .step-1 { border-left-color: #E53E3E; } .step-2 { border-left-color: #DD6B20; }
     .step-3 { border-left-color: #38A169; } .step-4 { border-left-color: #A0AEC0; }
+    .formula-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    .formula-table th { background-color: #EDF2F7 !important; color: #2D3748 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -109,7 +108,7 @@ cagr_f = round(((미래_전망[-1]/예상_2026)**(1/3)-1)*100, 3) if 예상_2026
 
 st.markdown(f"""
 <div class="guide-box">
-    <span class="guide-title">📑 실적 분석 참고내용</span>
+    <span style="font-weight:bold; color:#2D3748;">📑 실적 분석 참고내용</span><br>
     • <b>과거 3개년 실적 분석결과:</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}<br>
     • <b>과거 5개년 실적 분석결과:</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}<br>
     • <b>중장기 전망 분석결과:</b> 연평균 증가율 {cagr_f:.3f}%
@@ -147,7 +146,7 @@ html_table = f"""
     <thead><tr style="background-color: #4A5568; color: white;"><th>구분</th><th>평가방법</th><th>기준치</th><th>최고목표</th><th>예상평점</th><th>예상득점</th><th>도전성 단계</th><th>분석결과</th></tr></thead>
     <tbody>
         <tr><td rowspan="4" class="merged-cell">목표부여</td><td>{결과_데이터[0]['평가방법']}</td><td>{결과_데이터[0]['기준치']:.3f}</td><td>{결과_데이터[0]['최고목표']:.3f}</td><td>{결과_데이터[0]['예상평점']:.3f}</td><td>{결과_데이터[0]['예상득점']:.3f}</td><td>{결과_데이터[0]['도전성 단계']}</td><td>{결과_데이터[0]['분석결과']}</td></tr>
-        <tr><td>{결과_데이터[1]['평가방법']}</td><td>{결과_데이터[1]['기준치']:.3f}</td><td>{결과_데이터[1]['최고목표']:.3f}</td><td>{결과_데이터[1]['예상평점']:.3f}</td><td>{결과_데이터[1]['예상득점']:.3f}</td><td>{결과_데이터[1]['도전성 단계']}</td><td>{결과_데이터[1]['분석결과']}</td></tr>
+        <tr><td>{결과_데이터[1]['평가방법']}</td><td>{결과_데이터[1]['기준치']:.3f}</td><td>{결과_데이터[1]['최고목표']:.3f}</td><td>{결과_데이터[1]['예상평점']:.3f}</td><td>{결과_데이터[1]['예상득점']:.3f}</td><td>{결과_데이터[1]['도전성 단계']}</td><td>{결과_DATA[1]['분석결과']}</td></tr>
         <tr><td>{결과_데이터[2]['평가방법']}</td><td>{결과_데이터[2]['기준치']:.3f}</td><td>{결과_데이터[2]['최고목표']:.3f}</td><td>{결과_데이터[2]['예상평점']:.3f}</td><td>{결과_데이터[2]['예상득점']:.3f}</td><td>{결과_데이터[2]['도전성 단계']}</td><td>{결과_데이터[2]['분석결과']}</td></tr>
         <tr><td>{결과_데이터[3]['평가방법']}</td><td>{결과_데이터[3]['기준치']:.3f}</td><td>{결과_데이터[3]['최고목표']:.3f}</td><td>{결과_데이터[3]['예상평점']:.3f}</td><td>{결과_데이터[3]['예상득점']:.3f}</td><td>{결과_데이터[3]['도전성 단계']}</td><td>{결과_데이터[3]['분석결과']}</td></tr>
         <tr style="border-top: 2px solid #4A5568;"><td rowspan="3" class="merged-cell" style="background-color: #EBF8FF;">시나리오 분석</td><td>{결과_데이터[4]['평가방법']}</td><td>{결과_데이터[4]['기준치']:.3f}</td><td>{결과_데이터[4]['최고목표']:.3f}</td><td>{결과_데이터[4]['예상평점']:.3f}</td><td>{결과_데이터[4]['예상득점']:.3f}</td><td>{결과_데이터[4]['도전성 단계']}</td><td>{결과_데이터[4]['분석결과']}</td></tr>
@@ -158,9 +157,57 @@ html_table = f"""
 """
 st.markdown(html_table, unsafe_allow_html=True)
 
-# [사용자 요청: 2번 표 바로 밑으로 위치 조정된 상세 판정 기준]
+# [2번 표 밑: 평가방법별 산식 및 설명 추가]
+st.markdown(f"""
+<div class="guide-box" style="padding:15px;">
+    <span style="font-weight:bold; color:#2D3748; font-size:15px;">📋 평가방법별 목표 산식 안내 ({지표방향} 지표 기준)</span>
+    <table class="formula-table">
+        <thead>
+            <tr><th>평가방법</th><th>산식 (Formula)</th><th>상세 설명</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>목표부여(2편차)</td><td>기준치 {'+' if 지표방향=='상향' else '-'} (2 × 표준편차)</td><td>과거 3개년 실적 변동폭의 2배만큼 개선된 최상위 수준의 목표</td></tr>
+            <tr><td>목표부여(1편차)</td><td>기준치 {'+' if 지표방향=='상향' else '-'} (1 × 표준편차)</td><td>과거 실적의 통계적 변동 범위 내에서 상위권에 해당하는 목표</td></tr>
+            <tr><td>목표부여(120%)</td><td>기준치 × {1.2 if 지표방향=='상향' else 0.8}</td><td>과거 성과 대비 20%의 절대적 성장을 요구하는 도전적 목표</td></tr>
+            <tr><td>목표부여(110%)</td><td>기준치 × {1.1 if 지표방향=='상향' else 0.9}</td><td>과거 성과 대비 10%의 완만한 개선을 목표로 하는 표준적 수준</td></tr>
+            <tr><td>도전 시나리오</td><td>선형추세선 {'+' if 지표방향=='상향' else '-'} (1.5 × 표준편차)</td><td>미래 성장 궤도에 혁신 가중치를 부여한 적극적 지향점</td></tr>
+            <tr><td>유지 시나리오</td><td>과거 6개년 데이터 기반 선형추세선(Linear)</td><td>과거부터 현재까지의 흐름이 그대로 이어질 때의 기대 성과</td></tr>
+            <tr><td>보수 시나리오</td><td>선형추세선 {'-' if 지표방향=='상향' else '+'} (1.0 × 표준편차)</td><td>환경 변화 및 위험 요인을 반영하여 산출한 안정적 하한선</td></tr>
+        </tbody>
+    </table>
+    <p style="font-size:12px; color:#718096; margin-top:10px;">* 기준치: 3개년 평균실적과 전년도 실적 중 {('큰' if 지표방향=='상향' else '작은')} 값 적용</p>
+</div>
+""", unsafe_allow_html=True)
+
+# 3. 그래프
+st.markdown("---")
+st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
+years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
+idx_future = np.arange(6, 10)
+base_trend = slope_f * idx_future + intercept_f
+line_challenge = [예상_2026] + list(base_trend[1:] + (std5 * 1.5 if 지표방향=="상향" else -std5 * 1.5))
+line_maintain = [예상_2026] + list(base_trend[1:])
+line_conservative = [예상_2026] + list(base_trend[1:] - (std5 * 1.0 if 지표방향=="상향" else -std5 * 1.0))
+
+fig, ax = plt.subplots(figsize=(13, 6.5))
+ax.plot(years_all_label[:6], Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=20)
+ax.scatter(years_all_label[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=25)
+ax.plot(years_all_label[5:], line_challenge, color='#3182CE', linestyle='--', linewidth=2, label='도전 시나리오')
+ax.plot(years_all_label[5:], line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오')
+ax.plot(years_all_label[5:], line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오')
+
+colors = ['#E53E3E', '#DD6B20', '#38A169', '#805AD5']
+for i, row in enumerate(결과_데이터):
+    if row['구분'] == "목표부여":
+        ax.scatter(years_all_label[5], row['최고목표'], s=150, color=colors[i % 4], label=row['평가방법'], zorder=30, edgecolors='white')
+
+ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
+ax.grid(axis='y', linestyle='-', alpha=0.1)
+st.pyplot(fig)
+
+# [사용자 요청: 3번 그래프 밑으로 이동 및 명칭 변경]
 st.markdown("<br>", unsafe_allow_html=True)
-st.markdown('<span style="font-weight: bold; font-size: 16px; color: #2D3748;">💡 목표 도전성 판정 기준 상세</span>', unsafe_allow_html=True)
+st.markdown('<span style="font-weight: bold; font-size: 16px; color: #1A365D;">💡 목표 도전성 상세 판정 기준</span>', unsafe_allow_html=True)
 c1, c2 = st.columns(2)
 with c1:
     st.markdown("""
@@ -196,40 +243,6 @@ with c2:
         </span>
     </div>
     """, unsafe_allow_html=True)
-
-# 3. 그래프
-st.markdown("---")
-st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
-years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
-idx_future = np.arange(6, 10)
-base_trend = slope_f * idx_future + intercept_f
-line_challenge = [예상_2026] + list(base_trend[1:] + (std5 * 1.5 if 지표방향=="상향" else -std5 * 1.5))
-line_maintain = [예상_2026] + list(base_trend[1:])
-line_conservative = [예상_2026] + list(base_trend[1:] - (std5 * 1.0 if 지표방향=="상향" else -std5 * 1.0))
-
-fig, ax = plt.subplots(figsize=(13, 6.5))
-ax.plot(years_all_label[:6], Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=20)
-ax.scatter(years_all_label[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=25)
-ax.plot(years_all_label[5:], line_challenge, color='#3182CE', linestyle='--', linewidth=2, label='도전 시나리오')
-ax.plot(years_all_label[5:], line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오')
-ax.plot(years_all_label[5:], line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오')
-
-colors = ['#E53E3E', '#DD6B20', '#38A169', '#805AD5']
-for i, row in enumerate(결과_데이터):
-    if row['구분'] == "목표부여":
-        ax.scatter(years_all_label[5], row['최고목표'], s=150, color=colors[i % 4], label=row['평가방법'], zorder=30, edgecolors='white')
-
-ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
-ax.grid(axis='y', linestyle='-', alpha=0.1)
-st.pyplot(fig)
-
-st.markdown(f"""
-<div class="guide-box" style="margin-top: 5px; padding: 15px;">
-    • <b>도전 시나리오:</b> 추세선 대비 1.5표준편차(σ) 상향하여 한계 혁신을 유도하는 궤적<br>
-    • <b>유지 시나리오:</b> 과거 5개년 실적과 예상 실적을 잇는 선형 추세선(Linear Regression) 기반 전망<br>
-    • <b>보수 시나리오:</b> 외부 환경 악화 및 변동성을 고려하여 추세선 대비 1.0표준편차(σ) 하향 조정한 안정적 궤적
-</div>
-""", unsafe_allow_html=True)
 
 # 4. 담당자 제언
 st.markdown("---")
@@ -269,7 +282,7 @@ st.markdown(f"""
 <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <span style="background-color: #ebf8ff; color: #2b6cb0; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">AI 논리 분석 결과: {sel['도전성 단계']}</span>
-        <span style="color: #718096; font-size: 13px;">분석 기준일: 2026. 03. 03.</span>
+        <span style="color: #718096; font-size: 13px;">분석 기준일: {pd.Timestamp.now().strftime('%Y. %m. %d.')}</span>
     </div>
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
         <div style="text-align: center; padding: 15px; background-color: #f7fafc; border-radius: 10px;">
