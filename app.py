@@ -7,7 +7,7 @@ import os
 import requests
 from io import BytesIO
 
-# 1. 한글 폰트 설정 (Streamlit Cloud 환경 대응)
+# 1. 한글 폰트 설정
 @st.cache_resource
 def load_korean_font():
     font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
@@ -47,15 +47,16 @@ st.markdown("""
     .merged-cell { background-color: #EDF2F7; font-weight: bold; color: #2D3748; width: 120px; }
     .strong-label { font-size: 20px !important; font-weight: 900 !important; color: #1A365D !important; margin-bottom: 12px; display: block; }
     
-    /* 판정 기준 카드 스타일 */
     .step-card { border-radius: 10px; padding: 15px; border-left: 5px solid; margin-bottom: 10px; background-color: #FFFFFF; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .step-1 { border-left-color: #E53E3E; } .step-2 { border-left-color: #DD6B20; }
     .step-3 { border-left-color: #38A169; } .step-4 { border-left-color: #A0AEC0; }
     
-    /* 산식 설명 표 스타일 */
+    /* 상하향 통합 산식 표 스타일 */
     .formula-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background-color: white; }
-    .formula-table th { background-color: #F7FAFC !important; color: #2D3748 !important; text-align: center !important; }
-    .formula-table td { text-align: left !important; padding-left: 15px; }
+    .formula-table th { border: 1px solid #E2E8F0; padding: 8px; text-align: center !important; }
+    .formula-table td { border: 1px solid #E2E8F0; padding: 8px; text-align: left !important; }
+    .up-col { background-color: #EBF8FF !important; color: #2B6CB0 !important; }
+    .down-col { background-color: #FFF5F5 !important; color: #C53030 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -72,7 +73,7 @@ with st.sidebar:
 
 st.title("📊 계량 성과지표 목표 설정 및 중장기 전망 시뮬레이터")
 
-# 4. 실적 데이터 처리 및 분석
+# 4. 실적 데이터 처리
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
 with m_cols[0]:
@@ -122,7 +123,7 @@ st.markdown(f"""
 
 st.markdown("---")
 
-# 5. 도전성 비교 테이블 생성
+# 5. 도전성 비교 테이블
 기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
 방법별 = [
     ("목표부여", "목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -162,27 +163,51 @@ html_table = f"""
 """
 st.markdown(html_table, unsafe_allow_html=True)
 
-# [요청사항 1] 2번 표 밑에 산식 및 설명 추가 (상향/하향 구분)
+# [요청사항 1] 상향/하향 지표를 동시에 비교할 수 있는 통합 산식 가이드 표
 st.markdown(f"""
 <div class="guide-box" style="padding:15px; margin-top:10px;">
-    <span style="font-weight:bold; color:#2D3748; font-size:15px;">📋 평가방법별 목표 산식 및 설명 ({지표방향} 지표 기준)</span>
+    <span style="font-weight:bold; color:#2D3748; font-size:15px;">📋 평가방법별 목표 산식 및 설명 (상향/하향 비교 가이드)</span>
     <table class="formula-table">
         <thead>
-            <tr><th style="width:20%;">평가방법</th><th style="width:25%;">산식 (Formula)</th><th>상세 설명</th></tr>
+            <tr>
+                <th rowspan="2" style="background-color:#F7FAFC; width:14%;">평가방법</th>
+                <th colspan="2" class="up-col">📈 상향 지표 (실적이 높을수록 우수)</th>
+                <th colspan="2" class="down-col">📉 하향 지표 (실적이 낮을수록 우수)</th>
+            </tr>
+            <tr>
+                <th class="up-col" style="width:16%;">산식</th><th class="up-col">상세 설명</th>
+                <th class="down-col" style="width:16%;">산식</th><th class="down-col">상세 설명</th>
+            </tr>
         </thead>
         <tbody>
-            <tr><td>목표부여(2편차)</td><td>기준치 {'+' if 지표방향=='상향' else '-'} (2 × std)</td><td>과거 실적 변동폭의 2배를 개선치로 적용한 최상위 목표</td></tr>
-            <tr><td>목표부여(1편차)</td><td>기준치 {'+' if 지표방향=='상향' else '-'} (1 × std)</td><td>통계적 변동 범위 내에서 상위 수준의 성과를 지향하는 목표</td></tr>
-            <tr><td>목표부여(120%)</td><td>기준치 × {1.2 if 지표방향=='상향' else 0.8}</td><td>과거 성과 대비 20%의 절대 성장을 요구하는 도전적 목표</td></tr>
-            <tr><td>목표부여(110%)</td><td>기준치 × {1.1 if 지표방향=='상향' else 0.9}</td><td>과거 성과 대비 10% 수준의 점진적 향상을 목표로 설정</td></tr>
-            <tr><td>도전 시나리오</td><td>추세선 {'+' if 지표방향=='상향' else '-'} (1.5 × std)</td><td>미래 추세에 1.5표준편차의 가중치를 더한 공격적 시나리오</td></tr>
-            <tr><td>유지 시나리오</td><td>선형 추세값 (Linear)</td><td>과거부터 현재까지의 실적 흐름을 그대로 따른 전망치</td></tr>
-            <tr><td>보수 시나리오</td><td>추세선 {'-' if 지표방향=='상향' else '+'} (1.0 × std)</td><td>대외 환경의 불확실성을 고려하여 추세보다 낮게 설정한 안정적 목표</td></tr>
+            <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(2편차)</td>
+                <td>기준치 <b>+</b> (2 × std)</td><td>과거 실적 변동폭의 2배를 더하여 <b>가장 높고</b> 공격적인 목표치 산출</td>
+                <td>기준치 <b>-</b> (2 × std)</td><td>과거 실적 변동폭의 2배를 빼서 <b>가장 낮고</b> 타이트한 목표치 산출</td></tr>
+            <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(1편차)</td>
+                <td>기준치 <b>+</b> (1 × std)</td><td>통계적 변동 범위(1표준편차)만큼 상향된 우수한 목표치</td>
+                <td>기준치 <b>-</b> (1 × std)</td><td>통계적 변동 범위(1표준편차)만큼 하향 감축된 우수한 목표치</td></tr>
+            <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(120%)</td>
+                <td>기준치 <b>× 1.2</b></td><td>과거 기준 실적 대비 <b>20% 절대 증가</b>를 요구</td>
+                <td>기준치 <b>× 0.8</b></td><td>과거 기준 실적 대비 <b>20% 절대 감축</b>을 요구</td></tr>
+            <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(110%)</td>
+                <td>기준치 <b>× 1.1</b></td><td>과거 기준 실적 대비 <b>10% 점진적 증가</b>를 요구</td>
+                <td>기준치 <b>× 0.9</b></td><td>과거 기준 실적 대비 <b>10% 점진적 감축</b>을 요구</td></tr>
+            <tr><td style="font-weight:bold; text-align:center !important;">도전<br>시나리오</td>
+                <td>추세선 <b>+</b> (1.5 × std)</td><td>미래 성장 추세선에 혁신 가중치를 <b>더한</b> 적극적 지향점</td>
+                <td>추세선 <b>-</b> (1.5 × std)</td><td>미래 하락 추세선에 혁신 가중치를 <b>더욱 감축한</b> 적극적 지향점</td></tr>
+            <tr><td style="font-weight:bold; text-align:center !important;">유지<br>시나리오</td>
+                <td colspan="2" style="text-align:center !important;">선형 추세값 (Linear Trend) 기반</td>
+                <td colspan="2" style="text-align:center !important;">선형 추세값 (Linear Trend) 기반</td></tr>
+            <tr><td style="font-weight:bold; text-align:center !important;">보수<br>시나리오</td>
+                <td>추세선 <b>-</b> (1.0 × std)</td><td>불확실성을 고려하여 추세선보다 <b>낮게(안정적으로)</b> 잡은 하한선</td>
+                <td>추세선 <b>+</b> (1.0 × std)</td><td>불확실성을 고려하여 추세선보다 <b>높게(여유있게)</b> 잡은 상한선</td></tr>
         </tbody>
     </table>
-    <p style="font-size:12px; color:#718096; margin-top:8px;">* std: 표준편차 / 기준치: 최근 3개년 평균실적과 전년 실적 중 {('큰' if 지표방향=='상향' else '작은')} 값 적용</p>
+    <p style="font-size:12px; color:#718096; margin-top:8px;">* std(표준편차): 과거 실적의 변동성 / 기준치: 최근 3개년 평균실적과 전년 실적 중 <b>유리한 값</b>(상향은 큰 값, 하향은 작은 값) 적용</p>
 </div>
 """, unsafe_allow_html=True)
+
+
 
 # 6. 추세 그래프 시각화
 st.markdown("---")
@@ -201,7 +226,6 @@ ax.plot(years_all_label[5:], line_challenge, color='#3182CE', linestyle='--', li
 ax.plot(years_all_label[5:], line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오')
 ax.plot(years_all_label[5:], line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오')
 
-# 주요 지표 포인트 표시
 colors = ['#E53E3E', '#DD6B20', '#38A169', '#805AD5']
 for i, row in enumerate(결과_데이터[:4]):
     ax.scatter(years_all_label[5], row['최고목표'], s=150, color=colors[i], label=row['평가방법'], zorder=30, edgecolors='white')
@@ -210,7 +234,7 @@ ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True,
 ax.grid(axis='y', linestyle='-', alpha=0.1)
 st.pyplot(fig)
 
-# [요청사항 2] 3번 그래프 밑으로 이동 및 명칭 변경
+# 3번 그래프 하단: 판정 기준 카드
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown('<span style="font-weight: bold; font-size: 18px; color: #1A365D;">💡 목표 도전성 상세 판정 기준</span>', unsafe_allow_html=True)
 c1, c2 = st.columns(2)
@@ -249,7 +273,7 @@ with c2:
     </div>
     """, unsafe_allow_html=True)
 
-# 7. 담당자 제언 (최종 보고용)
+# 7. 담당자 제언
 st.markdown("---")
 st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
 
@@ -292,3 +316,39 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# [요청사항 2] 엑셀 다운로드 기능
+st.markdown("---")
+st.subheader("📥 데이터 내보내기")
+
+def to_excel():
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # 1. 실적 및 전망 데이터 시트
+        df_data = pd.DataFrame({
+            "연도": [str(y) for y in range(2021, 2030)],
+            "구분": ["과거실적"]*5 + ["기준예상"]*1 + ["미래전망"]*3,
+            "수치": 실적_리스트 + [예상_2026] + 미래_전망
+        })
+        df_data.to_excel(writer, sheet_name="실적_및_전망", index=False)
+        
+        # 2. 목표 비교 테이블 시트
+        df_res = pd.DataFrame(결과_데이터)
+        df_res.to_excel(writer, sheet_name="평가방법별_목표비교", index=False)
+        
+        # 3. AI 제언 텍스트 시트
+        report_text = f"최종 목표: {sel['최고목표']:.3f} ({sel['평가방법']})\n" \
+                      f"논리 분석 결과: {sel['도전성 단계']}\n" \
+                      f"상세 근거: {logic_text.replace('<b>', '').replace('</b>', '')}"
+        df_report = pd.DataFrame({"보고서 작성용 초안": [report_text]})
+        df_report.to_excel(writer, sheet_name="최종_가이드_초안", index=False)
+        
+    return output.getvalue()
+
+excel_file = to_excel()
+st.download_button(
+    label="📊 현재 결과 엑셀로 전체 다운로드 (.xlsx)",
+    data=excel_file,
+    file_name=f"{지표명}_목표설정_리포트.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
