@@ -6,7 +6,7 @@ import matplotlib.font_manager as fm
 import os
 import requests
 
-# 1. 한글 폰트 설정
+# 1. 한글 폰트 설정 (NanumGothic)
 @st.cache_resource
 def load_korean_font():
     font_url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
@@ -26,7 +26,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 스타일 정의
+# 2. CSS 스타일 정의 (대시보드 레이아웃)
 st.set_page_config(page_title="계량 성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -56,7 +56,6 @@ st.markdown("""
     .up-col { background-color: #EBF8FF !important; color: #2B6CB0 !important; }
     .down-col { background-color: #FFF5F5 !important; color: #C53030 !important; }
     
-    /* 타당성 분석 카드 스타일 */
     .valid-card { background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
     .status-badge { padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 14px; margin-bottom: 10px; display: inline-block; }
     .status-ok { background-color: #C6F6D5; color: #22543D; }
@@ -72,7 +71,7 @@ with st.sidebar:
     st.markdown('<div class="sidebar-white-box">', unsafe_allow_html=True)
     지표방향 = st.radio("direction", ["상향", "하향"], horizontal=True)
     st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('<span class="sidebar-label">⚖️ 가중치</span>', unsafe_allow_html=True)
+    st.markdown('<span class="sidebar-label">⚖️ 가중치 (%)</span>', unsafe_allow_html=True)
     가중치_값 = st.number_input("weight", value=5.000, step=0.001, format="%.3f")
 
 st.title("📊 계량 성과지표 목표 설정 및 중장기 전망 시뮬레이터")
@@ -127,7 +126,7 @@ st.markdown(f"""
 
 st.markdown("---")
 
-# 5. 도전성 비교 테이블
+# 5. 도전성 비교 테이블 생성
 기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
 방법별 = [
     ("목표부여", "목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -147,8 +146,6 @@ for 분류, 명칭, 최고 in 방법별:
     평점 = round(max(20.0, min(100.0, 20 + 80 * ((예상_2026 - 최저) / denom))), 3)
     도전성_지수 = round((((최고 - 예상_2026) / 오차 if 지표방향=="상향" else (예상_2026 - 최고) / 오차) / 2.0) * 100, 3)
     단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지"
-    
-    # 판정 로직 복구
     판정 = "✅ 유지" if (abs(최고 - 기준치) <= (3 * std3) and abs(최고/기준치 - 1) <= 0.3) else "⚠️ 한계"
     결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
@@ -169,7 +166,7 @@ html_table = f"""
 """
 st.markdown(html_table, unsafe_allow_html=True)
 
-# 통합 산식 가이드 표
+# [복구 완료] 상향/하향 지표 통합 산식 가이드 표 (전체 7개 행 포함)
 st.markdown(f"""
 <div class="guide-box" style="padding:15px; margin-top:10px;">
     <span style="font-weight:bold; color:#2D3748; font-size:15px;">📋 평가방법별 목표 산식 및 설명 (상향/하향 비교 가이드)</span>
@@ -177,7 +174,8 @@ st.markdown(f"""
         <thead>
             <tr>
                 <th rowspan="2" style="background-color:#F7FAFC; width:14%;">평가방법</th>
-                <th colspan="2" class="up-col">📈 상향 지표</th><th colspan="2" class="down-col">📉 하향 지표</th>
+                <th colspan="2" class="up-col">📈 상향 지표 (실적이 높을수록 우수)</th>
+                <th colspan="2" class="down-col">📉 하향 지표 (실적이 낮을수록 우수)</th>
             </tr>
             <tr>
                 <th class="up-col" style="width:16%;">산식</th><th class="up-col">상세 설명</th>
@@ -186,23 +184,32 @@ st.markdown(f"""
         </thead>
         <tbody>
             <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(2편차)</td>
-                <td>기준치 <b>+</b> (2 × std)</td><td>실적 변동폭의 2배를 더한 공격적 목표</td>
-                <td>기준치 <b>-</b> (2 × std)</td><td>실적 변동폭의 2배를 뺀 타이트한 목표</td></tr>
+                <td>기준치 <b>+ (2×std)</b></td><td>실적 변동폭의 2배를 더한 공격적 목표</td>
+                <td>기준치 <b>- (2×std)</b></td><td>실적 변동폭의 2배를 뺀 타이트한 목표</td></tr>
+            <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(1편차)</td>
+                <td>기준치 <b>+ (1×std)</b></td><td>통계적 변동 범위(1표준편차)만큼 상향</td>
+                <td>기준치 <b>- (1×std)</b></td><td>통계적 변동 범위(1표준편차)만큼 하향</td></tr>
+            <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(120%)</td>
+                <td>기준치 <b>× 1.2</b></td><td>과거 기준 실적 대비 <b>20% 절대 증가</b></td>
+                <td>기준치 <b>× 0.8</b></td><td>과거 기준 실적 대비 <b>20% 절대 감축</b></td></tr>
+            <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(110%)</td>
+                <td>기준치 <b>× 1.1</b></td><td>과거 기준 실적 대비 <b>10% 점진적 증가</b></td>
+                <td>기준치 <b>× 0.9</b></td><td>과거 기준 실적 대비 <b>10% 점진적 감축</b></td></tr>
             <tr><td style="font-weight:bold; text-align:center !important;">낙관적<br>시나리오</td>
-                <td>추세선 <b>+</b> (1.5 × std)</td><td>미래 추세선에 혁신 가중치를 <b>더한</b> 지향점</td>
-                <td>추세선 <b>-</b> (1.5 × std)</td><td>미래 추세선에서 혁신 가중치를 <b>뺀</b> 지향점</td></tr>
+                <td>추세선 <b>+ (1.5×std)</b></td><td>미래 추세선에 혁신 가중치를 <b>더한</b> 지향점</td>
+                <td>추세선 <b>- (1.5×std)</b></td><td>미래 추세선에서 혁신 가중치를 <b>뺀</b> 지향점</td></tr>
             <tr><td style="font-weight:bold; text-align:center !important;">기본<br>시나리오</td>
                 <td colspan="2" style="text-align:center !important;">선형 추세값 (Linear Trend) 기반</td>
                 <td colspan="2" style="text-align:center !important;">선형 추세값 (Linear Trend) 기반</td></tr>
             <tr><td style="font-weight:bold; text-align:center !important;">보수적<br>시나리오</td>
-                <td>추세선 <b>-</b> (1.0 × std)</td><td>불확실성을 고려하여 낮게 잡은 하한선</td>
-                <td>추세선 <b>+</b> (1.0 × std)</td><td>불확실성을 고려하여 높게 잡은 상한선</td></tr>
+                <td>추세선 <b>- (1.0×std)</b></td><td>불확실성을 고려하여 낮게 잡은 하한선</td>
+                <td>추세선 <b>+ (1.0×std)</b></td><td>불확실성을 고려하여 높게 잡은 상한선</td></tr>
         </tbody>
     </table>
 </div>
 """, unsafe_allow_html=True)
 
-# 6. 추세 그래프
+# 6. 추세 그래프 시각화
 st.markdown("---")
 st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
 years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
@@ -227,7 +234,7 @@ ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True,
 ax.grid(axis='y', linestyle='-', alpha=0.1)
 st.pyplot(fig)
 
-# 목표 도전성 상세 판정 기준 카드
+# 목표 도전성 단계 설명 카드
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown('<span style="font-weight: bold; font-size: 18px; color: #1A365D;">💡 목표 도전성 상세 판정 기준</span>', unsafe_allow_html=True)
 c1, c2 = st.columns(2)
@@ -236,9 +243,9 @@ with c1:
     st.markdown("""<div class="step-card step-2"><span style="color:#DD6B20; font-weight:bold; font-size:16px;">🔥 2단계: 적극 상향</span><br><span style="font-size:14px; color:#4A5568;">업무 개선 필요 수준 (추세선 대비 1.0~1.5σ)</span></div>""", unsafe_allow_html=True)
 with c2:
     st.markdown("""<div class="step-card step-3"><span style="color:#38A169; font-weight:bold; font-size:16px;">📈 3단계: 소극 개선</span><br><span style="font-size:14px; color:#4A5568;">완만한 추세 반영 (통계적 변동성 범위 내)</span></div>""", unsafe_allow_html=True)
-    st.markdown("""<div class="step-card step-4"><span style="color:#A0AEC0; font-weight:bold; font-size:16px;">⚖️ 4단계: 현상 유지</span><br><span style="font-size:14px; color:#4A5568;">최근 실적 유지 또는 보수적 목표</span></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="step-card step-4"><span style="color:#A0AEC0; font-weight:bold; font-size:16px;">⚖️ 4단계: 현상 유지</span><br><span style="font-size:14px; color:#4A5568;">최근 실적 유지 또는 보수적 목표 설정</span></div>""", unsafe_allow_html=True)
 
-# 7. 담당자 제언 및 타당성 분석 결과 복구
+# 7. 담당자 제언 및 타당성 분석 결과
 st.markdown("---")
 st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
 
@@ -258,7 +265,7 @@ with col_b:
 sel = next(item for item in 결과_데이터 if item["평가방법"] == 선택방법)
 sigma_lv = round(abs(sel['최고목표'] - 예상_2026) / std5, 2) if std5 != 0 else 0
 
-# [복구된 부분] 목표 설정 타당성 검토 결과 카드
+# [복구 완료] 목표 설정 타당성 검토 결과 카드
 st.markdown('<span style="font-weight: bold; font-size: 18px; color: #1A365D;">🔍 목표 설정 타당성 검토 결과</span>', unsafe_allow_html=True)
 status_class = "status-ok" if sel['분석결과'] == "✅ 유지" else "status-warn"
 st.markdown(f"""
