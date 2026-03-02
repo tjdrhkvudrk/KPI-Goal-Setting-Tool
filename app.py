@@ -27,7 +27,7 @@ def load_korean_font():
 font_file = load_korean_font()
 font_prop = fm.FontProperties(fname=font_file) if font_file else None
 
-# 2. CSS 디자인
+# 2. CSS 디자인 (상세 설명 카드 스타일 포함)
 st.set_page_config(page_title="계량 성과지표 시뮬레이터", layout="wide")
 st.markdown("""
 <style>
@@ -158,34 +158,9 @@ html_table = f"""
 """
 st.markdown(html_table, unsafe_allow_html=True)
 
-# 3. 그래프
-st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
-years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
-idx_future = np.arange(6, 10)
-base_trend = slope_f * idx_future + intercept_f
-line_challenge = [예상_2026] + list(base_trend[1:] + (std5 * 1.5 if 지표방향=="상향" else -std5 * 1.5))
-line_maintain = [예상_2026] + list(base_trend[1:])
-line_conservative = [예상_2026] + list(base_trend[1:] - (std5 * 1.0 if 지표방향=="상향" else -std5 * 1.0))
-
-fig, ax = plt.subplots(figsize=(13, 6.5))
-ax.plot(years_all_label[:6], Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=20)
-ax.scatter(years_all_label[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=25)
-ax.plot(years_all_label[5:], line_challenge, color='#3182CE', linestyle='--', linewidth=2, label='도전 시나리오')
-ax.plot(years_all_label[5:], line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오')
-ax.plot(years_all_label[5:], line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오')
-
-colors = ['#E53E3E', '#DD6B20', '#38A169', '#805AD5']
-for i, row in enumerate(결과_데이터):
-    if row['구분'] == "목표부여":
-        ax.scatter(years_all_label[5], row['최고목표'], s=150, color=colors[i % 4], label=row['평가방법'], zorder=30, edgecolors='white')
-
-ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
-ax.grid(axis='y', linestyle='-', alpha=0.1)
-st.pyplot(fig)
-
-# [복구된 4단계 상세 설명 섹션]
-st.markdown("---")
-st.subheader("💡 목표 도전성 판정 기준 상세")
+# [사용자 요청: 2번 표 바로 밑으로 위치 조정된 상세 판정 기준]
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown('<span style="font-weight: bold; font-size: 16px; color: #2D3748;">💡 목표 도전성 판정 기준 상세</span>', unsafe_allow_html=True)
 c1, c2 = st.columns(2)
 with c1:
     st.markdown("""
@@ -222,9 +197,43 @@ with c2:
     </div>
     """, unsafe_allow_html=True)
 
+# 3. 그래프
+st.markdown("---")
+st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
+years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
+idx_future = np.arange(6, 10)
+base_trend = slope_f * idx_future + intercept_f
+line_challenge = [예상_2026] + list(base_trend[1:] + (std5 * 1.5 if 지표방향=="상향" else -std5 * 1.5))
+line_maintain = [예상_2026] + list(base_trend[1:])
+line_conservative = [예상_2026] + list(base_trend[1:] - (std5 * 1.0 if 지표방향=="상향" else -std5 * 1.0))
+
+fig, ax = plt.subplots(figsize=(13, 6.5))
+ax.plot(years_all_label[:6], Y_full, marker='o', color='#2D3748', linewidth=3.5, label="과거 5개년 실적", zorder=20)
+ax.scatter(years_all_label[5], 예상_2026, color='#F6E05E', s=250, marker='D', edgecolor='#2D3748', linewidth=2, label='2026 예상(기준점)', zorder=25)
+ax.plot(years_all_label[5:], line_challenge, color='#3182CE', linestyle='--', linewidth=2, label='도전 시나리오')
+ax.plot(years_all_label[5:], line_maintain, color='#718096', linestyle='--', linewidth=2, label='유지 시나리오')
+ax.plot(years_all_label[5:], line_conservative, color='#D69E2E', linestyle='--', linewidth=2, label='보수 시나리오')
+
+colors = ['#E53E3E', '#DD6B20', '#38A169', '#805AD5']
+for i, row in enumerate(결과_데이터):
+    if row['구분'] == "목표부여":
+        ax.scatter(years_all_label[5], row['최고목표'], s=150, color=colors[i % 4], label=row['평가방법'], zorder=30, edgecolors='white')
+
+ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
+ax.grid(axis='y', linestyle='-', alpha=0.1)
+st.pyplot(fig)
+
+st.markdown(f"""
+<div class="guide-box" style="margin-top: 5px; padding: 15px;">
+    • <b>도전 시나리오:</b> 추세선 대비 1.5표준편차(σ) 상향하여 한계 혁신을 유도하는 궤적<br>
+    • <b>유지 시나리오:</b> 과거 5개년 실적과 예상 실적을 잇는 선형 추세선(Linear Regression) 기반 전망<br>
+    • <b>보수 시나리오:</b> 외부 환경 악화 및 변동성을 고려하여 추세선 대비 1.0표준편차(σ) 하향 조정한 안정적 궤적
+</div>
+""", unsafe_allow_html=True)
+
 # 4. 담당자 제언
 st.markdown("---")
-st.subheader("🎯 5. 도전적 목표 설정 가이드 (담당자 제언)")
+st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
 
 if 'f_idx' not in st.session_state: st.session_state.f_idx = 4
 names = [r['평가방법'] for r in 결과_데이터]
