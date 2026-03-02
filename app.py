@@ -50,12 +50,17 @@ st.markdown("""
     .step-1 { border-left-color: #E53E3E; } .step-2 { border-left-color: #DD6B20; }
     .step-3 { border-left-color: #38A169; } .step-4 { border-left-color: #A0AEC0; }
     
-    /* 상하향 통합 산식 표 스타일 */
     .formula-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background-color: white; }
     .formula-table th { border: 1px solid #E2E8F0; padding: 8px; text-align: center !important; }
     .formula-table td { border: 1px solid #E2E8F0; padding: 8px; text-align: left !important; }
     .up-col { background-color: #EBF8FF !important; color: #2B6CB0 !important; }
     .down-col { background-color: #FFF5F5 !important; color: #C53030 !important; }
+    
+    /* 타당성 분석 카드 스타일 */
+    .valid-card { background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .status-badge { padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 14px; margin-bottom: 10px; display: inline-block; }
+    .status-ok { background-color: #C6F6D5; color: #22543D; }
+    .status-warn { background-color: #FED7D7; color: #822727; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -122,7 +127,7 @@ st.markdown(f"""
 
 st.markdown("---")
 
-# 5. 도전성 비교 테이블 (명칭 수정 반영)
+# 5. 도전성 비교 테이블
 기준치 = round(float(max(avg3, 실적_리스트[-1]) if 지표방향=="상향" else min(avg3, 실적_리스트[-1])), 3)
 방법별 = [
     ("목표부여", "목표부여(2편차)", round(기준치 + 2*std3 if 지표방향=="상향" else 기준치 - 2*std3, 3)),
@@ -142,6 +147,8 @@ for 분류, 명칭, 최고 in 방법별:
     평점 = round(max(20.0, min(100.0, 20 + 80 * ((예상_2026 - 최저) / denom))), 3)
     도전성_지수 = round((((최고 - 예상_2026) / 오차 if 지표방향=="상향" else (예상_2026 - 최고) / 오차) / 2.0) * 100, 3)
     단계 = "🏆 한계 혁신" if 도전성_지수 >= 150 else "🔥 적극 상향" if 도전성_지수 >= 80 else "📈 소극 개선" if 도전성_지수 >= 40 else "⚖️ 현상 유지"
+    
+    # 판정 로직 복구
     판정 = "✅ 유지" if (abs(최고 - 기준치) <= (3 * std3) and abs(최고/기준치 - 1) <= 0.3) else "⚠️ 한계"
     결과_데이터.append({"구분": 분류, "평가방법": 명칭, "기준치": 기준치, "최고목표": 최고, "예상평점": 평점, "예상득점": round(평점 * (가중치_값 / 100.0), 3), "도전성 단계": 단계, "분석결과": 판정})
 
@@ -162,7 +169,7 @@ html_table = f"""
 """
 st.markdown(html_table, unsafe_allow_html=True)
 
-# 상향/하향 지표 통합 산식 가이드 표 (명칭 수정 반영)
+# 통합 산식 가이드 표
 st.markdown(f"""
 <div class="guide-box" style="padding:15px; margin-top:10px;">
     <span style="font-weight:bold; color:#2D3748; font-size:15px;">📋 평가방법별 목표 산식 및 설명 (상향/하향 비교 가이드)</span>
@@ -170,8 +177,7 @@ st.markdown(f"""
         <thead>
             <tr>
                 <th rowspan="2" style="background-color:#F7FAFC; width:14%;">평가방법</th>
-                <th colspan="2" class="up-col">📈 상향 지표 (실적이 높을수록 우수)</th>
-                <th colspan="2" class="down-col">📉 하향 지표 (실적이 낮을수록 우수)</th>
+                <th colspan="2" class="up-col">📈 상향 지표</th><th colspan="2" class="down-col">📉 하향 지표</th>
             </tr>
             <tr>
                 <th class="up-col" style="width:16%;">산식</th><th class="up-col">상세 설명</th>
@@ -180,33 +186,23 @@ st.markdown(f"""
         </thead>
         <tbody>
             <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(2편차)</td>
-                <td>기준치 <b>+</b> (2 × std)</td><td>과거 실적 변동폭의 2배를 더하여 <b>가장 높고</b> 공격적인 목표치 산출</td>
-                <td>기준치 <b>-</b> (2 × std)</td><td>과거 실적 변동폭의 2배를 빼서 <b>가장 낮고</b> 타이트한 목표치 산출</td></tr>
-            <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(1편차)</td>
-                <td>기준치 <b>+</b> (1 × std)</td><td>통계적 변동 범위(1표준편차)만큼 상향된 우수한 목표치</td>
-                <td>기준치 <b>-</b> (1 × std)</td><td>통계적 변동 범위(1표준편차)만큼 하향 감축된 우수한 목표치</td></tr>
-            <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(120%)</td>
-                <td>기준치 <b>× 1.2</b></td><td>과거 기준 실적 대비 <b>20% 절대 증가</b>를 요구</td>
-                <td>기준치 <b>× 0.8</b></td><td>과거 기준 실적 대비 <b>20% 절대 감축</b>을 요구</td></tr>
-            <tr><td style="font-weight:bold; text-align:center !important;">목표부여<br>(110%)</td>
-                <td>기준치 <b>× 1.1</b></td><td>과거 기준 실적 대비 <b>10% 점진적 증가</b>를 요구</td>
-                <td>기준치 <b>× 0.9</b></td><td>과거 기준 실적 대비 <b>10% 점진적 감축</b>을 요구</td></tr>
+                <td>기준치 <b>+</b> (2 × std)</td><td>실적 변동폭의 2배를 더한 공격적 목표</td>
+                <td>기준치 <b>-</b> (2 × std)</td><td>실적 변동폭의 2배를 뺀 타이트한 목표</td></tr>
             <tr><td style="font-weight:bold; text-align:center !important;">낙관적<br>시나리오</td>
-                <td>추세선 <b>+</b> (1.5 × std)</td><td>미래 성장 추세선에 혁신 가중치를 <b>더한</b> 적극적 지향점</td>
-                <td>추세선 <b>-</b> (1.5 × std)</td><td>미래 하락 추세선에 혁신 가중치를 <b>더욱 감축한</b> 적극적 지향점</td></tr>
+                <td>추세선 <b>+</b> (1.5 × std)</td><td>미래 추세선에 혁신 가중치를 <b>더한</b> 지향점</td>
+                <td>추세선 <b>-</b> (1.5 × std)</td><td>미래 추세선에서 혁신 가중치를 <b>뺀</b> 지향점</td></tr>
             <tr><td style="font-weight:bold; text-align:center !important;">기본<br>시나리오</td>
                 <td colspan="2" style="text-align:center !important;">선형 추세값 (Linear Trend) 기반</td>
                 <td colspan="2" style="text-align:center !important;">선형 추세값 (Linear Trend) 기반</td></tr>
             <tr><td style="font-weight:bold; text-align:center !important;">보수적<br>시나리오</td>
-                <td>추세선 <b>-</b> (1.0 × std)</td><td>불확실성을 고려하여 추세선보다 <b>낮게(안정적으로)</b> 잡은 하한선</td>
-                <td>추세선 <b>+</b> (1.0 × std)</td><td>불확실성을 고려하여 추세선보다 <b>높게(여유있게)</b> 잡은 상한선</td></tr>
+                <td>추세선 <b>-</b> (1.0 × std)</td><td>불확실성을 고려하여 낮게 잡은 하한선</td>
+                <td>추세선 <b>+</b> (1.0 × std)</td><td>불확실성을 고려하여 높게 잡은 상한선</td></tr>
         </tbody>
     </table>
-    <p style="font-size:12px; color:#718096; margin-top:8px;">* std(표준편차): 과거 실적의 변동성 / 기준치: 최근 3개년 평균실적과 전년 실적 중 <b>유리한 값</b>(상향은 큰 값, 하향은 작은 값) 적용</p>
 </div>
 """, unsafe_allow_html=True)
 
-# 6. 추세 그래프 시각화 (명칭 수정 반영)
+# 6. 추세 그래프
 st.markdown("---")
 st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
 years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
@@ -231,46 +227,18 @@ ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True,
 ax.grid(axis='y', linestyle='-', alpha=0.1)
 st.pyplot(fig)
 
-# 3번 그래프 하단: 판정 기준 카드
+# 목표 도전성 상세 판정 기준 카드
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown('<span style="font-weight: bold; font-size: 18px; color: #1A365D;">💡 목표 도전성 상세 판정 기준</span>', unsafe_allow_html=True)
 c1, c2 = st.columns(2)
 with c1:
-    st.markdown("""
-    <div class="step-card step-1">
-        <span style="color:#E53E3E; font-weight:bold; font-size:16px;">🏆 1단계: 한계 혁신 (Extreme Challenge)</span><br>
-        <span style="font-size:14px; color:#4A5568;">
-        • <b>정의:</b> 기존의 방식으로는 도달할 수 없는 최상위 수준의 도전적 목표<br>
-        • <b>통계:</b> 추세선 대비 1.5σ 초과 또는 과거 최고실적 대비 120% 이상 상향 시
-        </span>
-    </div>
-    <div class="step-card step-2">
-        <span style="color:#DD6B20; font-weight:bold; font-size:16px;">🔥 2단계: 적극 상향 (Stretch Goal)</span><br>
-        <span style="font-size:14px; color:#4A5568;">
-        • <b>정의:</b> 상당한 업무 개선 노력이 수반되어야 달성 가능한 의욕적인 목표<br>
-        • <b>통계:</b> 추세선 대비 1.0σ~1.5σ 수준 상향 또는 3개년 평균 대비 10% 이상 개선 시
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div class="step-card step-1"><span style="color:#E53E3E; font-weight:bold; font-size:16px;">🏆 1단계: 한계 혁신</span><br><span style="font-size:14px; color:#4A5568;">최상위 도전 수준 (추세선 대비 1.5σ 초과)</span></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="step-card step-2"><span style="color:#DD6B20; font-weight:bold; font-size:16px;">🔥 2단계: 적극 상향</span><br><span style="font-size:14px; color:#4A5568;">업무 개선 필요 수준 (추세선 대비 1.0~1.5σ)</span></div>""", unsafe_allow_html=True)
 with c2:
-    st.markdown("""
-    <div class="step-card step-3">
-        <span style="color:#38A169; font-weight:bold; font-size:16px;">📈 3단계: 소극 개선 (Incremental Gain)</span><br>
-        <span style="font-size:14px; color:#4A5568;">
-        • <b>정의:</b> 과거의 완만한 추세를 따르는 수준으로 도전성은 다소 낮은 목표<br>
-        • <b>통계:</b> 추세선 이내의 증가 또는 변동성 범위 내의 미세 조정을 통한 목표 설정 시
-        </span>
-    </div>
-    <div class="step-card step-4">
-        <span style="color:#A0AEC0; font-weight:bold; font-size:16px;">⚖️ 4단계: 현상 유지 (Status Quo)</span><br>
-        <span style="font-size:14px; color:#4A5568;">
-        • <b>정의:</b> 최근 실적 수준을 그대로 유지하거나 환경 요인에 의한 하락을 방어하는 수준<br>
-        • <b>통계:</b> 최근 실적 평균치에 수렴하거나 추세선보다 낮은 보수적 목표 설정 시
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div class="step-card step-3"><span style="color:#38A169; font-weight:bold; font-size:16px;">📈 3단계: 소극 개선</span><br><span style="font-size:14px; color:#4A5568;">완만한 추세 반영 (통계적 변동성 범위 내)</span></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="step-card step-4"><span style="color:#A0AEC0; font-weight:bold; font-size:16px;">⚖️ 4단계: 현상 유지</span><br><span style="font-size:14px; color:#4A5568;">최근 실적 유지 또는 보수적 목표</span></div>""", unsafe_allow_html=True)
 
-# 7. 담당자 제언
+# 7. 담당자 제언 및 타당성 분석 결과 복구
 st.markdown("---")
 st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
 
@@ -289,6 +257,19 @@ with col_b:
 
 sel = next(item for item in 결과_데이터 if item["평가방법"] == 선택방법)
 sigma_lv = round(abs(sel['최고목표'] - 예상_2026) / std5, 2) if std5 != 0 else 0
+
+# [복구된 부분] 목표 설정 타당성 검토 결과 카드
+st.markdown('<span style="font-weight: bold; font-size: 18px; color: #1A365D;">🔍 목표 설정 타당성 검토 결과</span>', unsafe_allow_html=True)
+status_class = "status-ok" if sel['분석결과'] == "✅ 유지" else "status-warn"
+st.markdown(f"""
+<div class="valid-card">
+    <div class="status-badge {status_class}">{sel['분석결과']}</div>
+    <div style="font-size: 14.5px; color: #2D3748;">
+        • <b>판정 근거:</b> 선택하신 목표치(<b>{sel['최고목표']:.3f}</b>)는 통계적 신뢰 구간 및 과거 성장 추세를 반영할 때 
+        {"<b>안정적인 달성 범위</b> 내에 있음" if sel['분석결과']=="✅ 유지" else "<b>통계적 임계치</b>를 초과하여 추가적인 자원 투입이나 혁신적 전략이 동반되어야 함"}을 확인했습니다.
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 if 비교방법 == "기준치":
     gap_val = round(abs(sel['최고목표'] - 기준치), 3)
@@ -309,7 +290,7 @@ st.markdown(f"""
         <p><b>[보고서용 목표 설정 근거 초안]</b></p>
         1. 본 지표의 최종 목표치(<b>{sel['최고목표']:.3f}</b>)는 <b>{sel['평가방법']}</b>에 의거하여 산출되었습니다.<br>
         2. {logic_text}<br>
-        3. 통계적 변동성 분석 결과, 본 목표는 과거 추세 대비 <b>{sigma_lv}σ</b> 수준의 공격적인 수치로 평가되어 도전성이 충분한 것으로 판단됩니다.
+        3. 통계적 변동성 분석 결과, 본 목표는 과거 추세 대비 <b>{sigma_lv}σ</b> 수준의 수치로 평가되어 도전성이 충분한 것으로 판단됩니다.
     </div>
 </div>
 """, unsafe_allow_html=True)
