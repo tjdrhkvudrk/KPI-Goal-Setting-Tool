@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import os
 import requests
+from io import BytesIO
 
 # 1. 한글 폰트 설정
 @st.cache_resource
@@ -45,9 +46,12 @@ st.markdown("""
     thead tr th { background-color: #4A5568 !important; color: white !important; text-align: center !important; }
     td { text-align: center !important; vertical-align: middle !important; border: 1px solid #E2E8F0; }
     .merged-cell { background-color: #EDF2F7; font-weight: bold; color: #2D3748; width: 120px; }
-    
-    /* 강조된 라벨 스타일 */
     .strong-label { font-size: 20px !important; font-weight: 900 !important; color: #1A365D !important; margin-bottom: 12px; display: block; }
+    
+    /* 4단계 상세 설명 카드 스타일 */
+    .step-card { border-radius: 10px; padding: 15px; border-left: 5px solid; margin-bottom: 10px; background-color: #FFFFFF; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .step-1 { border-left-color: #E53E3E; } .step-2 { border-left-color: #DD6B20; }
+    .step-3 { border-left-color: #38A169; } .step-4 { border-left-color: #A0AEC0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -179,9 +183,48 @@ ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True,
 ax.grid(axis='y', linestyle='-', alpha=0.1)
 st.pyplot(fig)
 
-# 4. 담당자 제언 (비교대상 명칭 수정: '기준치')
+# [복구된 4단계 상세 설명 섹션]
 st.markdown("---")
-st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
+st.subheader("💡 목표 도전성 판정 기준 상세")
+c1, c2 = st.columns(2)
+with c1:
+    st.markdown("""
+    <div class="step-card step-1">
+        <span style="color:#E53E3E; font-weight:bold; font-size:16px;">🏆 1단계: 한계 혁신 (Extreme Challenge)</span><br>
+        <span style="font-size:14px; color:#4A5568;">
+        • <b>정의:</b> 과거 실적의 상한선을 완전히 돌파하는 수준으로, 기존 방식으로는 달성 불가능한 목표<br>
+        • <b>통계:</b> 추세선 대비 1.5σ 초과 또는 과거 최고실적 대비 120% 이상 상향 설정 시
+        </span>
+    </div>
+    <div class="step-card step-2">
+        <span style="color:#DD6B20; font-weight:bold; font-size:16px;">🔥 2단계: 적극 상향 (Stretch Goal)</span><br>
+        <span style="font-size:14px; color:#4A5568;">
+        • <b>정의:</b> 상당한 노력과 업무 개선이 동반되어야 달성 가능한 목표로, 대내외 기관의 적극적 의지 반영<br>
+        • <b>통계:</b> 추세선 대비 1.0σ~1.5σ 수준 상향 또는 3개년 평균 대비 10% 이상 개선 시
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+with c2:
+    st.markdown("""
+    <div class="step-card step-3">
+        <span style="color:#38A169; font-weight:bold; font-size:16px;">📈 3단계: 소극 개선 (Incremental Gain)</span><br>
+        <span style="font-size:14px; color:#4A5568;">
+        • <b>정의:</b> 자연적 증가분 또는 과거의 완만한 추세를 따르는 수준으로, 통계적 타당성은 있으나 도전성은 낮음<br>
+        • <b>통계:</b> 추세선 이내의 증가 또는 변동성(σ) 범위 내의 미세 조정을 통한 목표 설정 시
+        </span>
+    </div>
+    <div class="step-card step-4">
+        <span style="color:#A0AEC0; font-weight:bold; font-size:16px;">⚖️ 4단계: 현상 유지 (Status Quo)</span><br>
+        <span style="font-size:14px; color:#4A5568;">
+        • <b>정의:</b> 전년도 실적 수준을 그대로 유지하거나, 외부 요인에 의한 하락을 방어하는 수준의 목표<br>
+        • <b>통계:</b> 최근 실적의 평균치에 수렴하거나 추세선보다 낮은 보수적 목표 설정 시
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
+# 4. 담당자 제언
+st.markdown("---")
+st.subheader("🎯 5. 도전적 목표 설정 가이드 (담당자 제언)")
 
 if 'f_idx' not in st.session_state: st.session_state.f_idx = 4
 names = [r['평가방법'] for r in 결과_데이터]
@@ -199,32 +242,25 @@ with c2:
 sel = next(item for item in 결과_데이터 if item["평가방법"] == 선택방법)
 sigma_lv = round(abs(sel['최고목표'] - 예상_2026) / std5, 2) if std5 != 0 else 0
 
-# '기준치' 선택 시의 종합 통계 분석 로직
 if 비교방법 == "기준치":
     base_gap = round(abs(sel['최고목표'] - 기준치), 3)
     base_sigma = round(base_gap / std3, 2) if std3 != 0 else 0
     imp_rate_vs_base = round((base_gap / 기준치) * 100, 2) if 기준치 != 0 else 0
-    
-    gap_display = str(base_gap)
-    sub_label = "기준치 대비 상향액"
+    gap_display, sub_label = str(base_gap), "기준치 대비 상향액"
     logic_text = f"""통계적 기준치(<b>{기준치:.3f}</b>) 대비 <b>{base_gap}</b>({imp_rate_vs_base}%)을 상향 설정하였으며, 
     이는 과거 실적 변동폭(표준편차)의 <b>{base_sigma}배</b>에 달하는 수준입니다. 
     최근 3개년 평균 및 전년 실적을 모두 상회하는 <b>{sel['도전성 단계']}</b> 목표로서 객관적 타당성을 확보하였습니다."""
 else:
     comp = next(item for item in 결과_데이터 if item["평가방법"] == 비교방법)
     gap = round(abs(sel['최고목표'] - comp['최고목표']), 3)
-    
-    gap_display = str(gap)
-    sub_label = "목표 상향액(Gap)"
+    gap_display, sub_label = str(gap), "목표 상향액(Gap)"
     logic_text = f"대안 모델인 '{비교방법}({comp['최고목표']:.3f})' 대비 <b>{gap}</b>의 추가 상향을 통해 기관의 성과 창출 의지를 적극 반영하였습니다."
 
 st.markdown(f"""
 <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <span style="background-color: #ebf8ff; color: #2b6cb0; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">
-            AI 논리 분석 결과: {sel['도전성 단계']}
-        </span>
-        <span style="color: #718096; font-size: 13px;">분석 기준일: 2026. 02. 28.</span>
+        <span style="background-color: #ebf8ff; color: #2b6cb0; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">AI 논리 분석 결과: {sel['도전성 단계']}</span>
+        <span style="color: #718096; font-size: 13px;">분석 기준일: 2026. 03. 03.</span>
     </div>
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
         <div style="text-align: center; padding: 15px; background-color: #f7fafc; border-radius: 10px;">
