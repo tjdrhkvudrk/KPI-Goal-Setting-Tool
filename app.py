@@ -57,8 +57,8 @@ st.markdown("""
     .step-bar { display: flex; gap: 10px; margin: 14px 0 4px 0; flex-wrap: wrap; }
     .step-chip { border-radius: 8px; padding: 10px 16px; border-left: 5px solid; background-color: #FFFFFF;
                  box-shadow: 0 2px 4px rgba(0,0,0,0.06); flex: 1; min-width: 180px; }
-    .step-chip .chip-title { font-weight: bold; font-size: 14px; }
-    .step-chip .chip-desc  { font-size: 12px; color: #4A5568; margin-top: 3px; }
+    .step-chip .chip-title { font-weight: bold; font-size: 15.5px; }
+    .step-chip .chip-desc  { font-size: 13px; color: #4A5568; margin-top: 4px; }
     .chip-1 { border-left-color: #E53E3E; } .chip-2 { border-left-color: #DD6B20; }
     .chip-3 { border-left-color: #38A169; } .chip-4 { border-left-color: #A0AEC0; }
 
@@ -138,7 +138,7 @@ suggested_2026 = round(slope_p * 5 + intercept_p, 3)
 
 with m_cols[1]:
     st.markdown('<div class="main-header bg-current">2026년 (예상)</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header" style="font-size:11px;">추세 기반 자동입력 (수정 가능)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header" style="font-size:12.5px;">추세 기반 자동입력 (수정 가능)</div>', unsafe_allow_html=True)
     예상_2026 = st.number_input("curr_2026", value=suggested_2026,
                                  step=0.001, format="%.3f", key="v_2026")
 
@@ -367,7 +367,7 @@ st.markdown(f"""
   <summary style="cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px;">
     <span style="font-size:18px;">📋</span>
     <span style="font-weight:bold; font-size:15px; color:#2D3748;">평가방법별 목표 산식 및 설명 (상향/하향 비교 가이드)</span>
-    <span style="font-size:12px; color:#A0AEC0; font-weight:normal; margin-left:6px;">* 클릭하면 상세한 설명을 확인하실 수 있습니다</span>
+    <span style="font-size:13.5px; color:#718096; font-weight:normal; margin-left:8px;">* 클릭하면 상세한 설명을 확인하실 수 있습니다</span>
   </summary>
   <div style="margin-top:10px;">
     <span style="font-size:12px; color:#718096;">※ 표준편차(std)는 과거 {std_구간} 실적 기준 {std_for_target:.3f} 적용</span>
@@ -469,7 +469,7 @@ st.markdown("---")
 st.markdown('<div class="section-header">4. 도전적 목표 설정 가이드 (담당자 제언)</div>', unsafe_allow_html=True)
 
 if 'f_idx' not in st.session_state:
-    st.session_state.f_idx = 4
+    st.session_state.f_idx = 0
 names = [r['평가방법'] for r in 결과_데이터]
 compare_names = ["기준치"] + names
 
