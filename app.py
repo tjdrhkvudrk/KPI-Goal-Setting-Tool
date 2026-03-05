@@ -51,9 +51,14 @@ st.markdown("""
     .guide-box  { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin-top: 15px; line-height: 1.8; }
     .strong-label { font-size: 20px !important; font-weight: 900 !important; color: #1A365D !important; margin-bottom: 12px; display: block; }
 
-    .step-card { border-radius: 10px; padding: 15px; border-left: 5px solid; margin-bottom: 10px; background-color: #FFFFFF; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .step-1 { border-left-color: #E53E3E; } .step-2 { border-left-color: #DD6B20; }
-    .step-3 { border-left-color: #38A169; } .step-4 { border-left-color: #A0AEC0; }
+    /* 도전성 단계 배지 — 한 줄 가로 배치 */
+    .step-bar { display: flex; gap: 10px; margin: 14px 0 4px 0; flex-wrap: wrap; }
+    .step-chip { border-radius: 8px; padding: 10px 16px; border-left: 5px solid; background-color: #FFFFFF;
+                 box-shadow: 0 2px 4px rgba(0,0,0,0.06); flex: 1; min-width: 180px; }
+    .step-chip .chip-title { font-weight: bold; font-size: 14px; }
+    .step-chip .chip-desc  { font-size: 12px; color: #4A5568; margin-top: 3px; }
+    .chip-1 { border-left-color: #E53E3E; } .chip-2 { border-left-color: #DD6B20; }
+    .chip-3 { border-left-color: #38A169; } .chip-4 { border-left-color: #A0AEC0; }
 
     .formula-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background-color: white; }
     .formula-table th { border: 1px solid #E2E8F0; padding: 8px; text-align: center !important; }
@@ -82,6 +87,11 @@ st.markdown("""
     .draft-box .draft-title { font-size: 16px; font-weight: bold; color: #7B341E; margin-bottom: 14px; display: block; }
     .draft-box .draft-para  { margin-bottom: 14px; }
     .draft-box .hl { background-color: #FEF3C7; padding: 1px 5px; border-radius: 4px; font-weight: bold; }
+
+    /* 섹션 헤더 스타일 */
+    .section-header { background: linear-gradient(90deg, #2D3748 0%, #4A5568 100%);
+                      color: white; padding: 10px 18px; border-radius: 8px;
+                      font-size: 16px; font-weight: bold; margin: 18px 0 10px 0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -99,8 +109,10 @@ with st.sidebar:
 st.title("📊 계량 성과지표 목표 설정 및 중장기 전망 시뮬레이터")
 
 # ──────────────────────────────────────────────
-# 4. 실적 데이터 입력
+# SECTION 1. 실적 데이터 입력 및 분석
 # ──────────────────────────────────────────────
+st.markdown('<div class="section-header">1. 실적 데이터 입력 및 분석</div>', unsafe_allow_html=True)
+
 실적_리스트 = []
 m_cols = st.columns([5, 1, 3])
 
@@ -114,11 +126,9 @@ with m_cols[0]:
                                   step=0.001, format="%.3f", key=f"v_{year}")
             실적_리스트.append(val)
 
-# 유효 데이터 수 (0이 아닌 값)
 유효_실적 = [v for v in 실적_리스트 if v != 0]
 n유효 = len(유효_실적)
 
-# 추세 기반 2026 자동 제안
 X_past = np.arange(5)
 Y_past = np.array(실적_리스트)
 slope_p, intercept_p = np.polyfit(X_past, Y_past, 1)
@@ -144,9 +154,7 @@ with m_cols[2]:
             미래_전망.append(f_val)
             st.markdown(f'<div class="auto-res">{f_val:.3f}</div>', unsafe_allow_html=True)
 
-# ──────────────────────────────────────────────
-# 5. 통계 계산
-# ──────────────────────────────────────────────
+# ── 통계 계산 ──
 avg3  = round(np.mean(실적_리스트[-3:]), 3)
 std3  = round(np.std(실적_리스트[-3:]), 3)
 cagr3 = round(((실적_리스트[-1] / 실적_리스트[-3]) ** (1/2) - 1) * 100, 3) if 실적_리스트[-3] != 0 else 0
@@ -160,36 +168,36 @@ avg_f  = round(np.mean(전망_전체), 3)
 std_f  = round(np.std(전망_전체), 3)
 cagr_f = round(((미래_전망[-1] / 예상_2026) ** (1/3) - 1) * 100, 3) if 예상_2026 != 0 else 0
 
-# 목표 산출에 사용할 표준편차: 5개년 우선, 없으면 3개년
 std_for_target = std5 if n유효 >= 5 else std3
 std_구간 = "5개년" if n유효 >= 5 else "3개년"
 
-st.markdown(f"""
-<div class="guide-box">
-    <span style="font-weight:bold; color:#2D3748;">📑 실적 분석 참고내용</span><br>
-    • <b>과거 3개년 실적 분석결과 (2023~2025):</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {cagr3:.3f}%<br>
-    • <b>과거 5개년 실적 분석결과 (2021~2025):</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {cagr5:.3f}%<br>
-    • <b>중장기 전망 분석결과 (2026~2029):</b> 평균 {avg_f:.3f}, 표준편차 {std_f:.3f}, 연평균 증가율 {cagr_f:.3f}%
-</div>
-""", unsafe_allow_html=True)
+# ── 실적 분석 참고내용: expander로 접기 ──
+with st.expander("📑 실적 분석 참고내용 보기 (클릭하여 펼치기)", expanded=False):
+    st.markdown(f"""
+    <div class="guide-box" style="margin-top:0;">
+        • <b>과거 3개년 실적 분석결과 (2023~2025):</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {cagr3:.3f}%<br>
+        • <b>과거 5개년 실적 분석결과 (2021~2025):</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {cagr5:.3f}%<br>
+        • <b>중장기 전망 분석결과 (2026~2029):</b> 평균 {avg_f:.3f}, 표준편차 {std_f:.3f}, 연평균 증가율 {cagr_f:.3f}%
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("---")
 
 # ──────────────────────────────────────────────
-# 6. 기준치 및 최고·최저 목표 계산
-#    기준치: 상향 → max(avg3, 직전년 실적), 하향 → min(avg3, 직전년 실적)
+# SECTION 2. 평가방법별 목표 도전성 비교
 # ──────────────────────────────────────────────
+st.markdown('<div class="section-header">2. 평가방법별 목표 도전성 비교</div>', unsafe_allow_html=True)
+
 if 지표방향 == "상향":
     기준치 = round(float(max(avg3, 실적_리스트[-1])), 3)
 else:
     기준치 = round(float(min(avg3, 실적_리스트[-1])), 3)
 
-s = std_for_target  # 표준편차 단축 변수
+s = std_for_target
 추세_2026 = round(slope_f * 6 + intercept_f, 3)
 
 
 def calc_high_low(방법명):
-    """(최고목표, 최저목표) 반환 — 상향/하향 모두 정확히 적용"""
     if 지표방향 == "상향":
         if 방법명 == "목표부여(2편차)":
             return round(기준치 + 2*s, 3), round(기준치 - 2*s, 3)
@@ -203,9 +211,9 @@ def calc_high_low(방법명):
             return round(추세_2026 + s * 1.5, 3), round(추세_2026 - s * 1.5, 3)
         elif 방법명 == "기본 시나리오":
             return round(추세_2026, 3), round(추세_2026 - s, 3)
-        else:  # 보수적 시나리오
+        else:
             return round(추세_2026 - s * 1.0, 3), round(추세_2026 - s * 2.0, 3)
-    else:  # 하향
+    else:
         if 방법명 == "목표부여(2편차)":
             return round(기준치 - 2*s, 3), round(기준치 + 2*s, 3)
         elif 방법명 == "목표부여(1편차)":
@@ -218,16 +226,15 @@ def calc_high_low(방법명):
             return round(추세_2026 - s * 1.5, 3), round(추세_2026 + s * 1.5, 3)
         elif 방법명 == "기본 시나리오":
             return round(추세_2026, 3), round(추세_2026 + s, 3)
-        else:  # 보수적 시나리오
+        else:
             return round(추세_2026 + s * 1.0, 3), round(추세_2026 + s * 2.0, 3)
 
 
 def calc_score(최고목표, 최저목표, 예상실적):
-    """예상실적을 최저~최고 구간에 선형 매핑 → 20~100점"""
     if 지표방향 == "상향":
         분자 = 예상실적 - 최저목표
     else:
-        분자 = 최저목표 - 예상실적   # 하향은 작을수록 높은 점수
+        분자 = 최저목표 - 예상실적
     denom = abs(최고목표 - 최저목표) if 최고목표 != 최저목표 else 1
     return round(max(20.0, min(100.0, 20 + 80 * (분자 / denom))), 3)
 
@@ -248,7 +255,6 @@ for 분류, 명칭 in 방법명_리스트:
     예상평점 = calc_score(최고목표, 최저목표, 예상_2026)
     예상득점 = round(예상평점 * (가중치_값 / 100.0), 3)
 
-    # 도전성 지수: 예상실적과 최고목표 간의 거리 (클수록 도전적)
     오차 = max(abs(최고목표 - 최저목표) * 0.5, 0.001)
     if 지표방향 == "상향":
         도전성_지수 = round(((최고목표 - 예상_2026) / 오차) * 100, 3)
@@ -276,18 +282,12 @@ for 분류, 명칭 in 방법명_리스트:
         "분석결과":   판정,
     })
 
-# ──────────────────────────────────────────────
-# 7. 도전성 비교 테이블 출력
-# ──────────────────────────────────────────────
-st.subheader("2. 평가방법별 목표 도전성 비교")
-
-
+# ── 도전성 비교 테이블 ──
 def td(val, cls=""):
     cls_str = f' class="{cls}"' if cls else ""
     if isinstance(val, float):
         return f"<td{cls_str}>{val:.3f}</td>"
     return f"<td{cls_str}>{val}</td>"
-
 
 rows_html = ""
 for i, r in enumerate(결과_데이터):
@@ -334,13 +334,34 @@ html_table = f"""
 """
 st.markdown(html_table, unsafe_allow_html=True)
 
-# ──────────────────────────────────────────────
-# 8. 산식 가이드 표
-# ──────────────────────────────────────────────
-st.markdown(f"""
-<div class="guide-box" style="padding:15px; margin-top:10px;">
-    <span style="font-weight:bold; color:#2D3748; font-size:15px;">📋 평가방법별 목표 산식 및 설명 (상향/하향 비교 가이드)</span>
-    <br><span style="font-size:12px; color:#718096;">※ 표준편차(std)는 과거 {std_구간} 실적 기준 {std_for_target:.3f} 적용</span>
+# ── 도전성 판정기준 — 표 바로 아래 가로 배치 ──
+st.markdown("""
+<div style="margin-top: 14px; margin-bottom: 4px; font-size: 13px; font-weight: bold; color: #4A5568;">
+    💡 도전성 단계 판정기준
+</div>
+<div class="step-bar">
+    <div class="step-chip chip-1">
+        <div class="chip-title" style="color:#E53E3E;">🏆 한계 혁신</div>
+        <div class="chip-desc">추세선 대비 1.5σ 초과<br>혁신적 방법을 동원해야 달성 가능한 최상위 목표</div>
+    </div>
+    <div class="step-chip chip-2">
+        <div class="chip-title" style="color:#DD6B20;">🔥 적극 상향</div>
+        <div class="chip-desc">추세선 대비 1.0~1.5σ<br>업무 프로세스 개선 및 추가 자원 투입이 필요한 수준</div>
+    </div>
+    <div class="step-chip chip-3">
+        <div class="chip-title" style="color:#38A169;">📈 소극 개선</div>
+        <div class="chip-desc">통계적 변동성 범위 내 (0.4~1.0σ)<br>자연 성장 추세를 반영한 현실적 목표</div>
+    </div>
+    <div class="step-chip chip-4">
+        <div class="chip-title" style="color:#718096;">⚖️ 현상 유지</div>
+        <div class="chip-desc">0.4σ 미만<br>최근 실적 유지 또는 보수적 목표 설정</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ── 산식 가이드: expander로 접기 ──
+with st.expander(f"📋 평가방법별 목표 산식 가이드 보기 (표준편차 {std_for_target:.3f} · {std_구간} 기준)", expanded=False):
+    st.markdown(f"""
     <table class="formula-table">
         <thead>
             <tr>
@@ -391,14 +412,14 @@ st.markdown(f"""
             </tr>
         </tbody>
     </table>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+
+st.markdown("---")
 
 # ──────────────────────────────────────────────
-# 9. 추세 그래프
+# SECTION 3. 중장기 추세 및 시나리오별 목표 궤적 분석
 # ──────────────────────────────────────────────
-st.markdown("---")
-st.subheader("3. 중장기 추세 및 시나리오별 목표 궤적 분석")
+st.markdown('<div class="section-header">3. 중장기 추세 및 시나리오별 목표 궤적 분석</div>', unsafe_allow_html=True)
 
 years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
 idx_future = np.arange(6, 10)
@@ -429,22 +450,12 @@ ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True,
 ax.grid(axis='y', linestyle='-', alpha=0.1)
 st.pyplot(fig)
 
-# 도전성 단계 카드
-st.markdown("<br>", unsafe_allow_html=True)
-st.markdown('<span style="font-weight: bold; font-size: 18px; color: #1A365D;">💡 목표 도전성 상세 판정 기준</span>', unsafe_allow_html=True)
-c1, c2 = st.columns(2)
-with c1:
-    st.markdown("""<div class="step-card step-1"><span style="color:#E53E3E; font-weight:bold; font-size:16px;">🏆 1단계: 한계 혁신</span><br><span style="font-size:14px; color:#4A5568;">최상위 도전 수준 (추세선 대비 1.5σ 초과)</span></div>""", unsafe_allow_html=True)
-    st.markdown("""<div class="step-card step-2"><span style="color:#DD6B20; font-weight:bold; font-size:16px;">🔥 2단계: 적극 상향</span><br><span style="font-size:14px; color:#4A5568;">업무 개선 필요 수준 (추세선 대비 1.0~1.5σ)</span></div>""", unsafe_allow_html=True)
-with c2:
-    st.markdown("""<div class="step-card step-3"><span style="color:#38A169; font-weight:bold; font-size:16px;">📈 3단계: 소극 개선</span><br><span style="font-size:14px; color:#4A5568;">완만한 추세 반영 (통계적 변동성 범위 내)</span></div>""", unsafe_allow_html=True)
-    st.markdown("""<div class="step-card step-4"><span style="color:#A0AEC0; font-weight:bold; font-size:16px;">⚖️ 4단계: 현상 유지</span><br><span style="font-size:14px; color:#4A5568;">최근 실적 유지 또는 보수적 목표 설정</span></div>""", unsafe_allow_html=True)
+st.markdown("---")
 
 # ──────────────────────────────────────────────
-# 10. 담당자 제언 — 도전적 목표 설정 가이드
+# SECTION 4. 도전적 목표 설정 가이드 (담당자 제언)
 # ──────────────────────────────────────────────
-st.markdown("---")
-st.subheader("🎯 4. 도전적 목표 설정 가이드 (담당자 제언)")
+st.markdown('<div class="section-header">4. 도전적 목표 설정 가이드 (담당자 제언)</div>', unsafe_allow_html=True)
 
 if 'f_idx' not in st.session_state:
     st.session_state.f_idx = 4
@@ -466,7 +477,7 @@ with col_b:
 sel = next(item for item in 결과_데이터 if item["평가방법"] == 선택방법)
 
 # 타당성 배지
-st.markdown('<span style="font-weight: bold; font-size: 18px; color: #1A365D;">🔍 목표 설정 타당성 검토 결과</span>', unsafe_allow_html=True)
+st.markdown('<span style="font-weight: bold; font-size: 16px; color: #1A365D;">🔍 목표 설정 타당성 검토 결과</span>', unsafe_allow_html=True)
 status_class = "status-ok" if sel['분석결과'] == "✅ 유지" else "status-warn"
 판정_설명 = ("통계적으로 달성 가능한 범위 안에 있어, <b>과거 실적의 자연스러운 성장 추세를 반영한 합리적인 목표</b>입니다." if sel['분석결과'] == "✅ 유지"
              else "과거 실적 변동폭을 크게 벗어난 수치로, <b>기존 방식으로는 달성이 어려운 혁신적 목표</b>임을 평가위원에게 별도로 설명하는 것이 좋습니다.")
@@ -479,10 +490,9 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── 원고 초안 생성 ──
+# ── 원고 초안 — 탭으로 분리 ──
 방향_텍스트 = "높일수록" if 지표방향 == "상향" else "낮출수록"
 
-# 기준치 선택 근거
 if 지표방향 == "상향":
     if 실적_리스트[-1] >= avg3:
         기준치_근거 = f"직전년도(2025년) 실적({실적_리스트[-1]:.3f})이 과거 3개년 평균({avg3:.3f})보다 높아 직전년도 실적을 기준치로 채택"
@@ -494,7 +504,6 @@ else:
     else:
         기준치_근거 = f"과거 3개년 평균({avg3:.3f})이 직전년도(2025년) 실적({실적_리스트[-1]:.3f})보다 낮아(더 좋아) 3개년 평균을 기준치로 채택"
 
-# 비교 대상 문장
 if 비교방법 == "기준치":
     gap_val  = round(abs(sel['최고목표'] - 기준치), 3)
     gap_rate = round((gap_val / 기준치) * 100, 2) if 기준치 != 0 else 0
@@ -506,7 +515,6 @@ else:
     비교_문장 = (f"다른 산출 방식인 '{비교방법}'({comp['최고목표']:.3f})보다 {gap_val} "
                 f"{'높은' if 지표방향 == '상향' else '낮은'} 수준으로 더 도전적인 목표를 채택하였습니다.")
 
-# 도전성 단계 쉬운 설명
 단계_설명_dict = {
     "🏆 한계 혁신": (
         "이는 현재 조직이 보유한 인력·예산·시스템만으로는 달성하기 매우 어려운, "
@@ -528,10 +536,9 @@ else:
         "급격한 변화보다는 안정적인 성과 관리에 초점을 두고 있습니다."
     ),
 }
-단계_한글  = sel['도전성 단계']
-단계_부연  = 단계_설명_dict.get(단계_한글, "")
+단계_한글 = sel['도전성 단계']
+단계_부연 = 단계_설명_dict.get(단계_한글, "")
 
-# 예상평점 해석
 평점 = sel['예상평점']
 if 평점 >= 90:
     평점_해석 = f"예상 평점은 <span class='hl'>{평점:.1f}점</span>으로, 현재 예상실적 수준에서도 최고 등급에 가까운 성과를 인정받을 가능성이 높습니다."
@@ -542,49 +549,80 @@ elif 평점 >= 50:
 else:
     평점_해석 = f"예상 평점은 <span class='hl'>{평점:.1f}점</span>으로, 예상실적이 목표 구간 하단에 위치하고 있어 실적 개선 노력이 중요합니다."
 
-# 원고 초안 — 변수에 따옴표 포함 가능성 있어 문자열 조립 방식으로 출력
-draft_html = (
-    '<div class="draft-box">'
-    '<span class="draft-title">📝 평가위원 설명용 원고 초안 — 이 내용을 그대로 발표·보고서에 활용하실 수 있습니다</span>'
+st.markdown("#### 📝 평가위원 설명용 원고 초안")
+st.caption("각 탭을 클릭해 항목별 설명을 확인하고, 발표·보고서에 그대로 활용하세요.")
 
-    '<div class="draft-para">'
-    '<b>① 이 지표가 무엇인지, 어떤 의미인지</b><br>'
-    + f'저희가 이번에 목표를 설정한 지표는 <span class="hl">「{지표명}」</span>입니다. '
-    + f'이 지표는 수치가 <span class="hl">{방향_텍스트}</span> 좋은 평가를 받는 지표이며, '
-    + f'전체 평가에서 <span class="hl">{가중치_값:.1f}점</span>의 가중치를 차지하는 중요한 항목입니다.'
-    + '</div>'
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "① 지표 개요",
+    "② 기준치 설정 근거",
+    "③ 목표 산출 방식",
+    "④ 목표 도전성",
+    "⑤ 중장기 지속가능성",
+])
 
-    + '<div class="draft-para">'
-    + '<b>② 목표를 세우는 출발점(기준치)을 어떻게 정했는지</b><br>'
-    + f'목표 수준을 정하기 위한 출발점인 기준치는 <span class="hl">{기준치:.3f}</span>로 설정하였습니다. '
-    + f'이는 {기준치_근거}한 것입니다. '
-    + '이렇게 기준치를 높게(또는 엄격하게) 잡음으로써, 목표가 과거 실적보다 후퇴하는 일이 없도록 하였습니다.'
-    + '</div>'
+hl = lambda text: f'<span class="hl">{text}</span>'
 
-    + '<div class="draft-para">'
-    + '<b>③ 어떤 방식으로 목표 수치를 계산했는지</b><br>'
-    + f'목표 산출 방식으로는 <span class="hl">「{선택방법}」</span>을 선택하였습니다. '
-    + f'이 방식은 과거 {std_구간} 실적 데이터의 통계적 변동 폭(표준편차 {std_for_target:.3f})과 실적 추세를 함께 반영하여 목표 구간을 설정하는 방법입니다.<br>'
-    + f'이에 따라 최고목표는 <span class="hl">{sel["최고목표"]:.3f}</span>, '
-    + f'최저목표는 <span class="hl">{sel["최저목표"]:.3f}</span>로 설정되었으며, '
-    + 비교_문장
-    + '</div>'
+with tab1:
+    st.markdown(f"""
+    <div class="draft-box">
+        <span class="draft-title">① 이 지표가 무엇인지, 어떤 의미인지</span>
+        <div class="draft-para">
+            저희가 이번에 목표를 설정한 지표는 {hl(f'「{지표명}」')}입니다.
+            이 지표는 수치가 {hl(방향_텍스트)} 좋은 평가를 받는 지표이며,
+            전체 평가에서 {hl(f'{가중치_값:.1f}점')}의 가중치를 차지하는 중요한 항목입니다.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    + '<div class="draft-para">'
-    + '<b>④ 이 목표가 얼마나 도전적인지</b><br>'
-    + f'설정된 목표는 도전성 분석 결과 <span class="hl">{단계_한글}</span>으로 판정되었습니다. '
-    + 단계_부연 + '<br>'
-    + f'2026년 예상실적({예상_2026:.3f}) 기준으로 평가하면, '
-    + 평점_해석
-    + f' 가중치({가중치_값:.1f}점)를 반영한 예상 득점은 <span class="hl">{sel["예상득점"]:.3f}점</span>입니다.'
-    + '</div>'
+with tab2:
+    st.markdown(f"""
+    <div class="draft-box">
+        <span class="draft-title">② 목표를 세우는 출발점(기준치)을 어떻게 정했는지</span>
+        <div class="draft-para">
+            목표 수준을 정하기 위한 출발점인 기준치는 {hl(f'{기준치:.3f}')}로 설정하였습니다.
+            이는 {기준치_근거}한 것입니다.
+            이렇게 기준치를 높게(또는 엄격하게) 잡음으로써, 목표가 과거 실적보다 후퇴하는 일이 없도록 하였습니다.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    + '<div class="draft-para">'
-    + '<b>⑤ 중장기적으로 지속 가능한 목표인지</b><br>'
-    + f'과거 5개년 실적 추세를 바탕으로 분석한 결과, 2027~2029년의 연평균 증가율은 <span class="hl">{cagr_f:.3f}%</span>로 전망됩니다. '
-    + '본 목표는 이러한 중장기 성장 방향과 일관성을 유지하고 있으며, '
-    + '지속적인 관리와 개선 노력을 병행한다면 충분히 달성 가능한 수준이라고 판단하였습니다.'
-    + '</div>'
-    + '</div>'
-)
-st.markdown(draft_html, unsafe_allow_html=True)
+with tab3:
+    st.markdown(f"""
+    <div class="draft-box">
+        <span class="draft-title">③ 어떤 방식으로 목표 수치를 계산했는지</span>
+        <div class="draft-para">
+            목표 산출 방식으로는 {hl(f'「{선택방법}」')}을 선택하였습니다.
+            이 방식은 과거 {std_구간} 실적 데이터의 통계적 변동 폭(표준편차 {std_for_target:.3f})과
+            실적 추세를 함께 반영하여 목표 구간을 설정하는 방법입니다.<br><br>
+            이에 따라 최고목표는 {hl(f'{sel["최고목표"]:.3f}')},
+            최저목표는 {hl(f'{sel["최저목표"]:.3f}')}로 설정되었으며, {비교_문장}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab4:
+    st.markdown(f"""
+    <div class="draft-box">
+        <span class="draft-title">④ 이 목표가 얼마나 도전적인지</span>
+        <div class="draft-para">
+            설정된 목표는 도전성 분석 결과 {hl(단계_한글)}으로 판정되었습니다.
+            {단계_부연}<br><br>
+            2026년 예상실적({예상_2026:.3f}) 기준으로 평가하면,
+            {평점_해석}
+            가중치({가중치_값:.1f}점)를 반영한 예상 득점은 {hl(f'{sel["예상득점"]:.3f}점')}입니다.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab5:
+    st.markdown(f"""
+    <div class="draft-box">
+        <span class="draft-title">⑤ 중장기적으로 지속 가능한 목표인지</span>
+        <div class="draft-para">
+            과거 5개년 실적 추세를 바탕으로 분석한 결과, 2027~2029년의 연평균 증가율은
+            {hl(f'{cagr_f:.3f}%')}로 전망됩니다.
+            본 목표는 이러한 중장기 성장 방향과 일관성을 유지하고 있으며,
+            지속적인 관리와 개선 노력을 병행한다면 충분히 달성 가능한 수준이라고 판단하였습니다.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
