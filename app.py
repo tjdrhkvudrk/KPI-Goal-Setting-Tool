@@ -24,11 +24,13 @@ def load_korean_font():
         fm.fontManager.addfont(font_path)
         font_name = fm.FontProperties(fname=font_path).get_name()
         plt.rc('font', family=font_name)
+        plt.rc('axes', unicode_minus=False)
+        return font_path
     plt.rc('axes', unicode_minus=False)
-    return font_path
+    return None
 
-font_file = load_korean_font()
-font_prop = fm.FontProperties(fname=font_file) if font_file else None
+_font_file = load_korean_font()
+font_prop = fm.FontProperties(fname=_font_file) if _font_file else None
 
 # ──────────────────────────────────────────────
 # 2. 페이지 설정 & CSS
@@ -171,15 +173,15 @@ cagr_f = round(((미래_전망[-1] / 예상_2026) ** (1/3) - 1) * 100, 3) if 예
 std_for_target = std5 if n유효 >= 5 else std3
 std_구간 = "5개년" if n유효 >= 5 else "3개년"
 
-# ── 실적 분석 참고내용: expander로 접기 ──
-with st.expander("📑 실적 분석 참고내용 보기 (클릭하여 펼치기)", expanded=False):
-    st.markdown(f"""
-    <div class="guide-box" style="margin-top:0;">
-        • <b>과거 3개년 실적 분석결과 (2023~2025):</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {cagr3:.3f}%<br>
-        • <b>과거 5개년 실적 분석결과 (2021~2025):</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {cagr5:.3f}%<br>
-        • <b>중장기 전망 분석결과 (2026~2029):</b> 평균 {avg_f:.3f}, 표준편차 {std_f:.3f}, 연평균 증가율 {cagr_f:.3f}%
-    </div>
-    """, unsafe_allow_html=True)
+# ── 실적 분석 참고내용: 바로 표시 ──
+st.markdown(f"""
+<div class="guide-box">
+    <span style="font-weight:bold; color:#2D3748;">📑 실적 분석 참고내용</span><br>
+    • <b>과거 3개년 실적 분석결과 (2023~2025):</b> 평균 {avg3:.3f}, 표준편차 {std3:.3f}, 연평균 증가율 {cagr3:.3f}%<br>
+    • <b>과거 5개년 실적 분석결과 (2021~2025):</b> 평균 {avg5:.3f}, 표준편차 {std5:.3f}, 연평균 증가율 {cagr5:.3f}%<br>
+    • <b>중장기 전망 분석결과 (2026~2029):</b> 평균 {avg_f:.3f}, 표준편차 {std_f:.3f}, 연평균 증가율 {cagr_f:.3f}%
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("---")
 
