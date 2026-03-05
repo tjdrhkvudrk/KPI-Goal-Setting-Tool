@@ -361,15 +361,17 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── 산식 가이드: 바로 표시 ──
+# ── 산식 가이드: HTML details/summary 태그로 접기/펼치기 ──
 st.markdown(f"""
-<div class="guide-box" style="padding:15px; margin-top:10px;">
-    <span style="font-weight:bold; color:#2D3748; font-size:15px;">📋 평가방법별 목표 산식 및 설명 (상향/하향 비교 가이드)</span>
-    <br><span style="font-size:12px; color:#718096;">※ 표준편차(std)는 과거 {std_구간} 실적 기준 {std_for_target:.3f} 적용</span>
-</div>
-""", unsafe_allow_html=True)
-st.markdown(f"""
-    <table class="formula-table">
+<details style="margin-top:10px; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:12px 16px;">
+  <summary style="cursor:pointer; font-weight:bold; font-size:15px; color:#2D3748; list-style:none; display:flex; align-items:center; gap:8px;">
+    <span style="font-size:18px;">📋</span>
+    평가방법별 목표 산식 및 설명 (상향/하향 비교 가이드)
+    <span style="margin-left:auto; font-size:12px; color:#718096; font-weight:normal;">▼ 클릭하여 펼치기</span>
+  </summary>
+  <div style="margin-top:10px;">
+    <span style="font-size:12px; color:#718096;">※ 표준편차(std)는 과거 {std_구간} 실적 기준 {std_for_target:.3f} 적용</span>
+    <table class="formula-table" style="margin-top:8px;">
         <thead>
             <tr>
                 <th rowspan="2" style="background-color:#F7FAFC; width:13%;">평가방법</th>
@@ -419,6 +421,8 @@ st.markdown(f"""
             </tr>
         </tbody>
     </table>
+  </div>
+</details>
 """, unsafe_allow_html=True)
 
 st.markdown("---")
