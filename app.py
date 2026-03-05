@@ -90,11 +90,11 @@ st.markdown("""
 # ──────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<span class="sidebar-label">📌 지표명</span>', unsafe_allow_html=True)
-    지표명 = st.text_input("kpi_name", value="전략 KPI")
+    지표명 = st.text_input("kpi_name", value="전략 KPI", label_visibility="collapsed")
     st.markdown('<span class="sidebar-label">🎯 지표 성격</span>', unsafe_allow_html=True)
-    지표방향 = st.radio("direction", ["상향", "하향"], horizontal=True)
+    지표방향 = st.radio("direction", ["상향", "하향"], horizontal=True, label_visibility="collapsed")
     st.markdown('<span class="sidebar-label">⚖️ 가중치</span>', unsafe_allow_html=True)
-    가중치_값 = st.number_input("weight", value=5.000, step=0.001, format="%.3f")
+    가중치_값 = st.number_input("weight", value=5.000, step=0.001, format="%.3f", label_visibility="collapsed")
 
 st.title("📊 계량 성과지표 목표 설정 및 중장기 전망 시뮬레이터")
 
@@ -297,22 +297,20 @@ for i, r in enumerate(결과_데이터):
         구분_td = '<td rowspan="3" class="merged-cell merged-cell2">시나리오 분석</td>'
     else:
         구분_td = ""
-
-    border_top = ' style="border-top: 2px solid #4A5568;"' if i == 4 else ""
-    rows_html += f"""
-    <tr{border_top}>
-        {구분_td}
-        <td>{r['평가방법']}</td>
-        {td(r['기준치'])}
-        {td(r['최저목표'], 'col-low')}
-        {td(r['최고목표'], 'col-high')}
-        {td(r['예상실적'], 'col-real')}
-        {td(r['예상평점'])}
-        {td(r['가중치'])}
-        {td(r['예상득점'])}
-        <td>{r['도전성 단계']}</td>
-        <td>{r['분석결과']}</td>
-    </tr>"""
+    border_style = ' style="border-top:2px solid #4A5568;"' if i == 4 else ""
+    row = (f'<tr{border_style}>' + 구분_td
+           + f'<td>{r["평가방법"]}</td>'
+           + td(r["기준치"])
+           + td(r["최저목표"], "col-low")
+           + td(r["최고목표"], "col-high")
+           + td(r["예상실적"], "col-real")
+           + td(r["예상평점"])
+           + td(r["가중치"])
+           + td(r["예상득점"])
+           + f'<td>{r["도전성 단계"]}</td>'
+           + f'<td>{r["분석결과"]}</td>'
+           + "</tr>")
+    rows_html += row
 
 html_table = f"""
 <table class="cmp-table">
@@ -544,49 +542,49 @@ elif 평점 >= 50:
 else:
     평점_해석 = f"예상 평점은 <span class='hl'>{평점:.1f}점</span>으로, 예상실적이 목표 구간 하단에 위치하고 있어 실적 개선 노력이 중요합니다."
 
-st.markdown(f"""
-<div class="draft-box">
-    <span class="draft-title">📝 평가위원 설명용 원고 초안 — 이 내용을 그대로 발표·보고서에 활용하실 수 있습니다</span>
+# 원고 초안 — 변수에 따옴표 포함 가능성 있어 문자열 조립 방식으로 출력
+draft_html = (
+    '<div class="draft-box">'
+    '<span class="draft-title">📝 평가위원 설명용 원고 초안 — 이 내용을 그대로 발표·보고서에 활용하실 수 있습니다</span>'
 
-    <div class="draft-para">
-        <b>① 이 지표가 무엇인지, 어떤 의미인지</b><br>
-        저희가 이번에 목표를 설정한 지표는 <span class="hl">「{지표명}」</span>입니다.
-        이 지표는 수치가 <span class="hl">{방향_텍스트}</span> 좋은 평가를 받는 지표이며,
-        전체 평가에서 <span class="hl">{가중치_값:.1f}%</span>의 가중치를 차지하는 중요한 항목입니다.
-    </div>
+    '<div class="draft-para">'
+    '<b>① 이 지표가 무엇인지, 어떤 의미인지</b><br>'
+    + f'저희가 이번에 목표를 설정한 지표는 <span class="hl">「{지표명}」</span>입니다. '
+    + f'이 지표는 수치가 <span class="hl">{방향_텍스트}</span> 좋은 평가를 받는 지표이며, '
+    + f'전체 평가에서 <span class="hl">{가중치_값:.1f}점</span>의 가중치를 차지하는 중요한 항목입니다.'
+    + '</div>'
 
-    <div class="draft-para">
-        <b>② 목표를 세우는 출발점(기준치)을 어떻게 정했는지</b><br>
-        목표 수준을 정하기 위한 출발점인 기준치는 <span class="hl">{기준치:.3f}</span>로 설정하였습니다.
-        이는 {기준치_근거}한 것입니다.
-        이렇게 기준치를 높게(또는 엄격하게) 잡음으로써, 목표가 과거 실적보다 후퇴하는 일이 없도록 하였습니다.
-    </div>
+    + '<div class="draft-para">'
+    + '<b>② 목표를 세우는 출발점(기준치)을 어떻게 정했는지</b><br>'
+    + f'목표 수준을 정하기 위한 출발점인 기준치는 <span class="hl">{기준치:.3f}</span>로 설정하였습니다. '
+    + f'이는 {기준치_근거}한 것입니다. '
+    + '이렇게 기준치를 높게(또는 엄격하게) 잡음으로써, 목표가 과거 실적보다 후퇴하는 일이 없도록 하였습니다.'
+    + '</div>'
 
-    <div class="draft-para">
-        <b>③ 어떤 방식으로 목표 수치를 계산했는지</b><br>
-        목표 산출 방식으로는 <span class="hl">「{선택방법}」</span>을 선택하였습니다.
-        이 방식은 과거 {std_구간} 실적 데이터의 통계적 변동 폭(표준편차 {std_for_target:.3f})과
-        실적 추세를 함께 반영하여 목표 구간을 설정하는 방법입니다.<br>
-        이에 따라 최고목표는 <span class="hl">{sel['최고목표']:.3f}</span>,
-        최저목표는 <span class="hl">{sel['최저목표']:.3f}</span>로 설정되었으며,
-        {비교_문장}
-    </div>
+    + '<div class="draft-para">'
+    + '<b>③ 어떤 방식으로 목표 수치를 계산했는지</b><br>'
+    + f'목표 산출 방식으로는 <span class="hl">「{선택방법}」</span>을 선택하였습니다. '
+    + f'이 방식은 과거 {std_구간} 실적 데이터의 통계적 변동 폭(표준편차 {std_for_target:.3f})과 실적 추세를 함께 반영하여 목표 구간을 설정하는 방법입니다.<br>'
+    + f'이에 따라 최고목표는 <span class="hl">{sel["최고목표"]:.3f}</span>, '
+    + f'최저목표는 <span class="hl">{sel["최저목표"]:.3f}</span>로 설정되었으며, '
+    + 비교_문장
+    + '</div>'
 
-    <div class="draft-para">
-        <b>④ 이 목표가 얼마나 도전적인지</b><br>
-        설정된 목표는 도전성 분석 결과 <span class="hl">{단계_한글}</span>으로 판정되었습니다.
-        {단계_부연}<br>
-        2026년 예상실적({예상_2026:.3f}) 기준으로 평가하면,
-        {평점_해석}
-        가중치({가중치_값:.1f}%)를 반영한 예상 득점은 <span class="hl">{sel['예상득점']:.3f}점</span>입니다.
-    </div>
+    + '<div class="draft-para">'
+    + '<b>④ 이 목표가 얼마나 도전적인지</b><br>'
+    + f'설정된 목표는 도전성 분석 결과 <span class="hl">{단계_한글}</span>으로 판정되었습니다. '
+    + 단계_부연 + '<br>'
+    + f'2026년 예상실적({예상_2026:.3f}) 기준으로 평가하면, '
+    + 평점_해석
+    + f' 가중치({가중치_값:.1f}점)를 반영한 예상 득점은 <span class="hl">{sel["예상득점"]:.3f}점</span>입니다.'
+    + '</div>'
 
-    <div class="draft-para">
-        <b>⑤ 중장기적으로 지속 가능한 목표인지</b><br>
-        과거 5개년 실적 추세를 바탕으로 분석한 결과, 2027~2029년의 연평균 증가율은
-        <span class="hl">{cagr_f:.3f}%</span>로 전망됩니다.
-        본 목표는 이러한 중장기 성장 방향과 일관성을 유지하고 있으며,
-        지속적인 관리와 개선 노력을 병행한다면 충분히 달성 가능한 수준이라고 판단하였습니다.
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    + '<div class="draft-para">'
+    + '<b>⑤ 중장기적으로 지속 가능한 목표인지</b><br>'
+    + f'과거 5개년 실적 추세를 바탕으로 분석한 결과, 2027~2029년의 연평균 증가율은 <span class="hl">{cagr_f:.3f}%</span>로 전망됩니다. '
+    + '본 목표는 이러한 중장기 성장 방향과 일관성을 유지하고 있으며, '
+    + '지속적인 관리와 개선 노력을 병행한다면 충분히 달성 가능한 수준이라고 판단하였습니다.'
+    + '</div>'
+    + '</div>'
+)
+st.markdown(draft_html, unsafe_allow_html=True)
