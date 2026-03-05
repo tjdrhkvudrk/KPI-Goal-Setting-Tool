@@ -136,11 +136,18 @@ Y_past = np.array(실적_리스트)
 slope_p, intercept_p = np.polyfit(X_past, Y_past, 1)
 suggested_2026 = round(slope_p * 5 + intercept_p, 3)
 
+# 과거 실적이 바뀔 때마다 2026 추세값을 session_state에 자동 반영
+# (사용자가 직접 수정한 경우에는 덮어쓰지 않도록 이전 추세값과 비교)
+_prev_suggested = st.session_state.get("_prev_suggested_2026", None)
+if _prev_suggested is None or st.session_state.get("v_2026") == _prev_suggested:
+    # 사용자가 아직 손대지 않았거나 추세값 그대로인 경우 → 자동 갱신
+    st.session_state["v_2026"] = suggested_2026
+st.session_state["_prev_suggested_2026"] = suggested_2026
+
 with m_cols[1]:
     st.markdown('<div class="main-header bg-current">2026년 (예상)</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header" style="font-size:12.5px;">추세 기반 자동입력 (수정 가능)</div>', unsafe_allow_html=True)
-    예상_2026 = st.number_input("curr_2026", value=suggested_2026,
-                                 step=0.001, format="%.3f", key="v_2026")
+    예상_2026 = st.number_input("curr_2026", step=0.001, format="%.3f", key="v_2026")
 
 with m_cols[2]:
     st.markdown('<div class="main-header bg-future">중장기 실적 전망 (자동)</div>', unsafe_allow_html=True)
