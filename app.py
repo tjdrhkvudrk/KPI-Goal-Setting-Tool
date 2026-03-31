@@ -532,11 +532,13 @@ st.markdown("---")
 # ──────────────────────────────────────────────
 st.markdown('<div class="section-header">3. 중장기 추세 및 시나리오별 목표 궤적 분석</div>', unsafe_allow_html=True)
 
-# 그래프: 유효한 연도만 표시
-years_all_label = [f"'{y-2000}" for y in range(2021, 2030)]
-future_years_label = [f"'{y-2000}" for y in range(2026, 2030)]
+# 그래프: X축을 숫자 인덱스(0~8)로 통일하고, xticks로 레이블만 부착
+# 인덱스 0=2021, 1=2022, ..., 5=2026, 6=2027, 7=2028, 8=2029
+ALL_YEARS = list(range(2021, 2030))
+all_x_idx   = list(range(9))                              # 0~8
+all_x_label = [f"'{y-2000}" for y in ALL_YEARS]          # '21~'29
 
-idx_future = np.arange(6, 10)
+idx_future = np.array([5, 6, 7, 8])                      # 2026~2029
 base_trend = slope_f * idx_future + intercept_f
 
 if 지표방향 == "상향":
@@ -547,33 +549,41 @@ else:
     line_conservative = [예상_2026] + list(base_trend[1:] + std5 * 1.0)
 line_base = [예상_2026] + list(base_trend[1:])
 
+# 유효 연도의 숫자 인덱스 (year_to_idx: 2021->0, ..., 2025->4)
+valid_x_idx = [year_to_idx[y] for y in valid_years]      # 숫자 인덱스
+
 fig, ax = plt.subplots(figsize=(13, 6.5))
 
-# 과거 실적: 유효한 데이터 점만 표시 (빈 연도는 점선으로 이어줌)
-valid_x_labels = [f"'{y-2000}" for y in valid_years]
-valid_x_positions = [years_all_label.index(lbl) for lbl in valid_x_labels]
-
-# 유효 점만 선으로 연결
-ax.plot(valid_x_labels, valid_vals, marker='o', color='#2D3748',
+# ① 과거 실적: 유효한 인덱스-값 쌍만 연결
+ax.plot(valid_x_idx, valid_vals, marker='o', color='#2D3748',
         linewidth=3.5, label="과거 실적", zorder=20)
 
-# 빈 연도가 있는 경우 추세선도 과거 구간에 점선으로 표시
+# ② 빈 연도가 있을 때 추정 추세선 (과거 구간 전체, 점선)
 if n유효 < 5:
-    trend_past_x = [f"'{y-2000}" for y in YEARS]
-    trend_past_y = [slope_p * year_to_idx[y] + intercept_p for y in YEARS]
+    trend_past_x = list(range(5))                         # 인덱스 0~4
+    trend_past_y = [slope_p * xi + intercept_p for xi in trend_past_x]
     ax.plot(trend_past_x, trend_past_y, color='#CBD5E0', linewidth=1.5,
             linestyle=':', label="과거 추세선 (추정)", zorder=10)
 
-ax.scatter(future_years_label[0], 예상_2026, color='#F6E05E', s=250, marker='D',
+# ③ 2026 예상실적 (인덱스 5)
+ax.scatter([5], [예상_2026], color='#F6E05E', s=250, marker='D',
            edgecolor='#2D3748', linewidth=2, label='2026 예상실적', zorder=25)
-ax.plot(future_years_label, line_optimistic,   color='#3182CE', linestyle='--', linewidth=2, label='낙관적 시나리오')
-ax.plot(future_years_label, line_base,          color='#718096', linestyle='--', linewidth=2, label='기본 시나리오')
-ax.plot(future_years_label, line_conservative,  color='#D69E2E', linestyle='--', linewidth=2, label='보수적 시나리오')
 
+# ④ 시나리오 선 (인덱스 5~8)
+ax.plot(idx_future, line_optimistic,   color='#3182CE', linestyle='--', linewidth=2, label='낙관적 시나리오')
+ax.plot(idx_future, line_base,          color='#718096', linestyle='--', linewidth=2, label='기본 시나리오')
+ax.plot(idx_future, line_conservative,  color='#D69E2E', linestyle='--', linewidth=2, label='보수적 시나리오')
+
+# ⑤ 목표부여 방법별 최고목표 (2026, 인덱스 5)
 colors = ['#E53E3E', '#DD6B20', '#38A169', '#805AD5']
 for i, row in enumerate(결과_데이터[:4]):
-    ax.scatter(future_years_label[0], row['최고목표'], s=160, color=colors[i],
+    ax.scatter([5], [row['최고목표']], s=160, color=colors[i],
                label=f"{row['평가방법']} 최고목표", zorder=30, edgecolors='white', linewidth=1.5)
+
+# ⑥ X축 눈금: 0~8 → '21~'29 레이블
+ax.set_xticks(all_x_idx)
+ax.set_xticklabels(all_x_label, fontproperties=font_prop)
+ax.set_xlim(-0.3, 8.3)
 
 ax.legend(prop=font_prop, loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
 ax.grid(axis='y', linestyle='-', alpha=0.1)
